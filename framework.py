@@ -192,7 +192,7 @@ class Scene:
         self.program = compileProgram('data/MatrixPerspective.vert', 'data/StandardColors.frag', True)
 
         self.pMatrixUnif = glGetUniformLocation(self.program, "perspectiveMatrix")
-        self.offsetUnif  = glGetUniformLocation(self.program, "offset")
+        self.mMatrixUnif = glGetUniformLocation(self.program, "modelMatrix")
 
         self.vbo = createVertexArrayBuffer(self.vertexData)
 
@@ -201,7 +201,11 @@ class Scene:
         #glBindVertexArray(self.vao_id.value)
 
 
-        self.pMatrix = getProjectionMatrix(640, 480, 30.0, 0.5)
+        self.pMatrix = getProjectionMatrix(45,640, 480, 30.0, 0.5)
+        self.mMatrix = getIdentityMatrix()
+
+        self.rot = 15.0
+
         glUseProgram(self.program)
         glUniformMatrix4fv(self.pMatrixUnif, 1, GL_FALSE, self.pMatrix.data)
         glUseProgram(0)
@@ -212,6 +216,10 @@ class Scene:
 
         glViewport(0,0,640,480)
     def update(self, dt):
+        self.mMatrix = getIdentityMatrix()
+        self.mMatrix = self.mMatrix * getTranslationMatrix(0.0, 1.0, -5.0)
+        self.mMatrix = self.mMatrix * getRotationMatrixY(self.rot)
+        #self.rot += 0.05
         return 1
 
     def render(self):
@@ -220,10 +228,9 @@ class Scene:
 
         glUseProgram(self.program)
 
-        glUniform2f(self.offsetUnif, 0.5, 0.5)
-       
          
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glUniformMatrix4fv(self.mMatrixUnif, 1, GL_FALSE, self.mMatrix.data)
         glEnableVertexAttribArray(0)
         glEnableVertexAttribArray(1)
         glVertexAttribPointer(0, 4, GL_FLOAT, False, 0, c_void_p(0))
@@ -240,6 +247,7 @@ class Scene:
 scene = 0
 
 def cycle(info):
+    scene.update(0)
     scene.render()
     
 

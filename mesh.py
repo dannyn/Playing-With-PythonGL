@@ -52,6 +52,12 @@ class ObjMesh:
         if filename:
             self.load(filename)
 
+        self.colors = [ [1.0, 0.0, 1.0, 1.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                        [0.0, 0.0, 1.0, 1.0],
+                        [1.0, 1.0, 0.0, 1.0],
+                        [0.0, 1.0, 1.0, 1.0],
+                        [1.0, 0.0, 1.0, 1.0]]
     def load(self, filename):
 
         curMat   = None
@@ -166,6 +172,20 @@ class ObjMesh:
             for c in p:
                 self.vertexData.append(float(c))
             self.vertexData.append(float(1.0))
+        for r,g,b,a in self.colors:
+            self.vertexData.append(float(r))
+            self.vertexData.append(float(g))
+            self.vertexData.append(float(b))
+            self.vertexData.append(float(a))
+        self.vertexData.append(0.5)
+        self.vertexData.append(0.5)
+        self.vertexData.append(0.0) 
+        self.vertexData.append(1.0)
+        self.vertexData.append(0.0)
+        self.vertexData.append(0.5) 
+        self.vertexData.append(1.0) 
+        self.vertexData.append(1.0)
+
         #######
         # when support for it is added, normals, colors, and textures will go here
 
@@ -173,9 +193,10 @@ class ObjMesh:
 
         for v in self.faces:
             self.indices.append(int(v[0]))
-
+            
 
         
+        print len (self.vertexData) 
         self.vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         array_type = (GLfloat * len(self.vertexData))
@@ -188,13 +209,16 @@ class ObjMesh:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(self.indices) *4, array_type(*self.indices), GL_STATIC_DRAW)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-        print self.vertices
+        #print self.vertices
+        #print self.indices
     def render(self):    
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glEnableVertexAttribArray(0)
+        glEnableVertexAttribArray(1)
         glVertexAttribPointer(0,4,GL_FLOAT, GL_FALSE, 0, c_void_p(0))
+        glVertexAttribPointer(1,4,GL_FLOAT, GL_FALSE, 0, c_void_p(128))
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ibo)
-        glDrawElements(GL_QUADS, len(self.indices),GL_UNSIGNED_INT, c_void_p(0) )
+        glDrawElements(GL_LINES, len(self.indices),GL_UNSIGNED_INT, c_void_p(0) )
 
         #glBindBuffer(GL_ARRAY_BUFFER,0)
 

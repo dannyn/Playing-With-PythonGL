@@ -96,7 +96,6 @@ class Scene:
         self.pMatrixUnif = glGetUniformLocation(self.program, "perspectiveMatrix")
         self.mMatrixUnif = glGetUniformLocation(self.program, "modelMatrix")
 
-        self.color = glGetUniformLocation(self.program, "color")
 
         #self.vao_id = GLuint(0)
         #vertex_array_object.glGenVertexArrays(1, self.vao_id)
@@ -114,9 +113,9 @@ class Scene:
         glUniformMatrix4fv(self.pMatrixUnif, 1, GL_FALSE, self.pMatrix.data)
         glUseProgram(0)
 
-        #glEnable(GL_CULL_FACE)
-        #glCullFace(GL_BACK)
-        #glFrontFace(GL_CCW)
+        glEnable(GL_CULL_FACE)
+        glCullFace(GL_BACK)
+        glFrontFace(GL_CW)
 
         #glEnable(GL_DEPTH_TEST)
         #glDepthMask(GL_TRUE)
@@ -126,10 +125,10 @@ class Scene:
         glViewport(0,0,640,480)
     def update(self, dt):
         self.mMatrix = getIdentityMatrix()
+        self.mMatrix = self.mMatrix * getRotationMatrixX(5.0)
+        self.mMatrix = self.mMatrix * getRotationMatrixZ(15.0)
         self.mMatrix = self.mMatrix * getTranslationMatrix(0.0, 0.0, -5.0)
-
-        self.mMatrix = self.mMatrix * getRotationMatrixZ(self.rot)
-        self.rot += 0.05
+        self.rot += 0.01
         return 1
 
     def render(self):
@@ -141,7 +140,6 @@ class Scene:
 
          
         glUniformMatrix4fv(self.mMatrixUnif, 1, GL_FALSE, self.mMatrix.data)
-        glUniform4f(self.color,1.0, 0.0, 0.0, 1.0)
         self.m.render()
         glUseProgram(0)
         

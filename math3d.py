@@ -144,6 +144,7 @@ def getProjectionMatrix(fov, width, height, zFar, zNear):
     pMatrix[10] = (zFar * zNear) / (zNear - zFar)
     pMatrix[11] = -1.0
     pMatrix[14] = (2 * zFar * zNear) / (zNear - zFar)
+    #pMatrix[15] = 0
 
     return pMatrix
 

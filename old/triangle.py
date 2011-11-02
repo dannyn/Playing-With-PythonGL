@@ -25,13 +25,8 @@ from OpenGL.GL import *
 from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
 from OpenGL.GL.ARB import vertex_array_object
 
-## framework files
-from shader    import *
+from shader import *
 from glHelpers import *
-from math3d    import *
-from mesh      import *
-
-
 """
     * The pygame.USEREVENT event is used to bind a function for each cycle of the game.  
          It gets 'info' passed to it.
@@ -90,68 +85,48 @@ class Context:
 class Scene:
 
     def __init__(self):
+        self.vertexData = [0.0,  0.0,   1.0, 1.0,
+                           1.0,  0.0, 0.0, 1.0,
+                           0.0,  1.0, 0.0, 1.0,
+                           1.0,  0.0,   0.0, 1.0,
+                           0.0,  1.0,   0.0, 1.0,
+                           0.0,  0.0,   1.0, 1.0]
+        self.program = compileProgram('data/Colors.vert', 'data/Colors.frag', True)
 
-        self.program = compileProgram('data/shaders/MatrixPerspective.vert', 'data/shaders/StandardColors.frag', True)
-
-        self.pMatrixUnif = glGetUniformLocation(self.program, "perspectiveMatrix")
-        self.mMatrixUnif = glGetUniformLocation(self.program, "modelMatrix")
-
-        self.color = glGetUniformLocation(self.program, "color")
+        self.vbo = createVertexArrayBuffer(self.vertexData)
 
         #self.vao_id = GLuint(0)
         #vertex_array_object.glGenVertexArrays(1, self.vao_id)
         #glBindVertexArray(self.vao_id.value)
 
-
-        self.pMatrix = getProjectionMatrix(45,640, 480, 30.0, 0.5)
-        self.mMatrix = getIdentityMatrix()
-
-        self.rot = 15.0
-
-        self.m = ObjMesh('data/cube.obj')
-        self.m.createVertexArrayBuffer()
-        glUseProgram(self.program)
-        glUniformMatrix4fv(self.pMatrixUnif, 1, GL_FALSE, self.pMatrix.data)
-        glUseProgram(0)
-
-        #glEnable(GL_CULL_FACE)
-        #glCullFace(GL_BACK)
-        #glFrontFace(GL_CCW)
-
-        #glEnable(GL_DEPTH_TEST)
-        #glDepthMask(GL_TRUE)
-        #glDepthFunc(GL_LEQUAL)
-        #glDepthRange(0.0, 1.0)
-
         glViewport(0,0,640,480)
-    def update(self, dt):
-        self.mMatrix = getIdentityMatrix()
-        self.mMatrix = self.mMatrix * getTranslationMatrix(0.0, 0.0, -5.0)
 
-        self.mMatrix = self.mMatrix * getRotationMatrixZ(self.rot)
-        self.rot += 0.05
+    def update(self, dt):
         return 1
 
     def render(self):
         glClearColor(0.5, 0.5, 0.5, 0.0)
-        glClearDepth(1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT)
 
         glUseProgram(self.program)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glEnableVertexAttribArray(0)
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 4, GL_FLOAT, False, 0, c_void_p(0))
+        glVertexAttribPointer(0, 4, GL_FLOAT, False, 0, c_void_p(48))
 
-         
-        glUniformMatrix4fv(self.mMatrixUnif, 1, GL_FALSE, self.mMatrix.data)
-        glUniform4f(self.color,1.0, 0.0, 0.0, 1.0)
-        self.m.render()
+        glDrawArrays(GL_TRIANGLES, 0, 3)
+
+        glDisableVertexAttribArray(0)
+        glDisableVertexAttribArray(1)
         glUseProgram(0)
-        
+
         pygame.display.flip()
 
 
 scene = 0
 
 def cycle(info):
-    scene.update(0)
     scene.render()
     
 
@@ -161,5 +136,4 @@ if __name__ == "__main__":
     c.bindFunction(USEREVENT, cycle)
 
     c.run()
-
     

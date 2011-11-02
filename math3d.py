@@ -218,6 +218,11 @@ def getRotationMatrixY(theta):
 def getRotationMatrixZ(theta):
     m = getIdentityMatrix()
 
+    theta = theta * degToRad
+    m[0] = cos(theta)
+    m[1] = sin(theta)
+    m[4] = -sin(theta)
+    m[5] = cos(theta)
     return m
 
 def getScalingMatrix(x,y,z):
@@ -237,6 +242,6 @@ if __name__ == "__main__":
 
     m = getIdentityMatrix()
 
-
+    print getTranslationMatrix(1,2,3)
 
 

@@ -235,13 +235,6 @@ def getScalingMatrix(x,y,z):
  
     return m
 
-def calcSurfaceNormal(triangle):
-
-    v1 = triangle[0]
-    v2 = triangle[1]
-    v3 = triangle[2]
-
-
 
 if __name__ == "__main__":
 

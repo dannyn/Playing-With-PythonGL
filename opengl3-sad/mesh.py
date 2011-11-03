@@ -36,7 +36,6 @@ from OpenGL.GL.ARB import vertex_array_object
 from glHelpers import *
 
 
-# i am not at all convinced that this is necessary
 class ObjVertex:
     # expects a tuple or a list
     # [x,y,z] or (x,y,z)
@@ -73,6 +72,7 @@ class ObjFace:
         
         self.numVertices = len(self.vertexIndices)
 
+        print self.vertexIndices , self.normalIndices, self.textureIndices
 
 class ObjMesh:
 
@@ -81,7 +81,7 @@ class ObjMesh:
 
         self.vertices = []
         self.faces = []
-        self.vertexNormals = []
+        self.textureVertices = []
         self.groups = []
     
         self.vao = 0
@@ -105,7 +105,7 @@ class ObjMesh:
             v = tuple (re.findall('-?[0-9]+\.?[0-9]*', x))
             self.vertices.append(ObjVertex(v))
         getTextureVertex = lambda x: 0
-        getVertexNormal = lambda x: self.vertexNormals.append( re.findall('-?[0-9]+\.?[0-9]*', x))
+        getVertexNormal = lambda x: 0
         getParamSpaceVertex = lambda x: 0
         getCsType = lambda x: 0
         getDegree = lambda x: 0 
@@ -118,6 +118,17 @@ class ObjMesh:
         def getFace(x):
             f = re.findall('[0-9]/?[0-9]*/?/?[0-9]*', x)
             self.faces.append(ObjFace(f))
+            #print vertices
+            '''for v in vertices:
+                vertexData = re.findall('[0-9]+', v)
+                if len(vertexData) == 1:
+                    self.faces.append( (int(vertexData[0])-1,None, None,curMat,curGroup))
+                elif len(vertexData) == 2:
+                    self.faces.append( (int(vertexData[0])-1, None, int(vertexData[1])-1,curMat,curGroup))
+                elif len(vertexData) == 3:
+                    self.faces.append( (int(vertexData[0])-1, int(vertexData[1])-1, int(vertexData[2])-1,
+                                        curMat,curGroup))'''
+             
         getCurv = lambda x: 0
         get2dCurve = lambda x: 0
         getSurf = lambda x: 0 
@@ -189,14 +200,66 @@ class ObjMesh:
             if not re.match ('^#', line):
                 tokens [ re.match('^\s*[a-z]+', line).group()](line)
 
-        print 'OBJ file', 'filename, was succesfully loaded.'
+        #for v in self.vertices:
+        #    print v
 
-    def createVertexArray(self):
+        print filename, " loaded."
+
+    def createVertexArrayBuffer(self):
+
+        # step 1: organize data in a way that opengl can use
+        self.vertexData = []
+        self.indices = []
+
+        for p in self.vertices:
+            for c in p:
+                self.vertexData.append(float(c))
+            self.vertexData.append(float(1.0))
+        for r,g,b,a in self.colors:
+            self.vertexData.append(float(r))
+            self.vertexData.append(float(g))
+            self.vertexData.append(float(b))
+            self.vertexData.append(float(a))
+        self.vertexData.append(0.5)
+        self.vertexData.append(0.5)
+        self.vertexData.append(0.0) 
+        self.vertexData.append(1.0)
+        self.vertexData.append(0.0)
+        self.vertexData.append(0.5) 
+        self.vertexData.append(1.0) 
+        self.vertexData.append(1.0)
+
+        #######
+        # when support for it is added, normals, colors, and textures will go here
+
+        ######################
+
+        for v in self.faces:
+            self.indices.append(int(v[0]))
+            
+
+        
+        self.vbo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        array_type = (GLfloat * len(self.vertexData))
+        glBufferData(GL_ARRAY_BUFFER, len(self.vertexData) * 4,  array_type(*self.vertexData), GL_STATIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+        self.ibo = glGenBuffers(1)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ibo)
+        array_type = (GLint * len(self.indices))
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(self.indices) *4, array_type(*self.indices), GL_STATIC_DRAW)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+        #print self.vertices
+        #print self.indices
+    def getVertexArray(self):
 
         # i think maybe this should be in its own function
         vertexData = []
         for face in self.faces:
             for i in range(face.numVertices):
+                #print face.vertexIndices[i], self.vertices[face.vertexIndices[i]]
                 vertexData.append(self.vertices[face.vertexIndices[i]].x)
                 vertexData.append(self.vertices[face.vertexIndices[i]].y)
                 vertexData.append(self.vertices[face.vertexIndices[i]].z)
@@ -218,19 +281,7 @@ class ObjMesh:
 
         glBindBuffer(GL_ARRAY_BUFFER,0)
 
-    def renderImmediateMode(self):
-        glBegin(GL_TRIANGLES)
-
-        for face in self.faces:
-            for i in range(3):
-                coord = self.vertices[face.vertexIndices[i]]
-                #norm = self.vertexNormals[face.normalIndices[i]]
-                glColor3f(0.0, 0.0, 1.0)
-                glVertex3f(coord.x, coord.y, coord.z)
-        glEnd()
-
-
-
+# for testing
 if __name__ == "__main__":        
     #pygame.init()
     #screen = pygame.display.set_mode((640,480), OPENGL|DOUBLEBUF)

@@ -22,8 +22,6 @@ except ImportError:
         gl = cdll.LoadLibrary(path)
  
 from OpenGL.GL import *
-from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
-from OpenGL.GL.ARB import vertex_array_object
 
 ## framework files
 from shader    import *
@@ -86,78 +84,28 @@ class Context:
         self.running = False
 
 
-
-class Scene:
+class Camera:
+    r = 0      # circular 
+    theta = 0  # up and down
+    d = 0      # distance from origin
 
     def __init__(self):
+        a = 1
+    def point(self):
 
-        self.program = compileProgram('data/shaders/MatrixPerspective.vert', 'data/shaders/StandardColors.frag', True)
+        glTranslatef(-5.0,-2.5,-22.0)      # Move Right And Into The Screen
+        glRotatef(10.0, 1.0, 0.0, 0.0)
 
-        self.pMatrixUnif = glGetUniformLocation(self.program, "perspectiveMatrix")
-        self.mMatrixUnif = glGetUniformLocation(self.program, "modelMatrix")
+        #glRotatef(self.r, 0.0, 1.0, 0.0)
+        #glRotatef(self.theta, 1.0, 0.0, 0.0)
 
+    def reset(self):
+        r = 0
+        theta = 0
 
-        #self.vao_id = GLuint(0)
-        #vertex_array_object.glGenVertexArrays(1, self.vao_id)
-        #glBindVertexArray(self.vao_id.value)
+    """def moveUp(self, theta):
+    def moveDown(self, theta):
+    def rotateClockwise(self, r):
+    def roteteCounterClockwise(self, r):
+    def moveTo(self, r, theta):"""
 
-
-        self.pMatrix = getProjectionMatrix(45,640, 480, 30.0, 0.5)
-        self.mMatrix = getIdentityMatrix()
-
-        self.rot = 15.0
-
-        self.m = ObjMesh('data/cube.obj')
-        self.m.createVertexArrayBuffer()
-        glUseProgram(self.program)
-        glUniformMatrix4fv(self.pMatrixUnif, 1, GL_FALSE, self.pMatrix.data)
-        glUseProgram(0)
-
-        glEnable(GL_CULL_FACE)
-        glCullFace(GL_BACK)
-        glFrontFace(GL_CW)
-
-        #glEnable(GL_DEPTH_TEST)
-        #glDepthMask(GL_TRUE)
-        #glDepthFunc(GL_LEQUAL)
-        #glDepthRange(0.0, 1.0)
-
-        glViewport(0,0,640,480)
-    def update(self, dt):
-        self.mMatrix = getIdentityMatrix()
-        self.mMatrix = self.mMatrix * getRotationMatrixX(5.0)
-        self.mMatrix = self.mMatrix * getRotationMatrixZ(15.0)
-        self.mMatrix = self.mMatrix * getTranslationMatrix(0.0, 0.0, -5.0)
-        self.rot += 0.01
-        return 1
-
-    def render(self):
-        glClearColor(0.5, 0.5, 0.5, 0.0)
-        glClearDepth(1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-        glUseProgram(self.program)
-
-         
-        glUniformMatrix4fv(self.mMatrixUnif, 1, GL_FALSE, self.mMatrix.data)
-        self.m.render()
-        glUseProgram(0)
-        
-        pygame.display.flip()
-
-
-scene = 0
-
-def cycle(info):
-    scene.update(0)
-    scene.render()
-    
-
-if __name__ == "__main__":
-    c = Context("demo", (640, 480))
-    scene = Scene()
-    c.bindFunction(USEREVENT, cycle)
-
-    c.run()
-
-    

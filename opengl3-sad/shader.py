@@ -63,32 +63,27 @@ def compileShader(source, shader_type):
     return shader
 
 
-def compileProgram(vertexLocation, fragmentLocation, fromFile=False):
+def compileProgram(vertex_source, fragment_source, fromFile=False):
     vertex_shader = None
     fragment_shader = None
     program = glCreateProgram()
 
     if fromFile:
-        if vertexLocation:
-            vertexFile = open(vertexLocation, 'r')
+        if vertex_source:
+            vertexFile = open(vertex_source, 'r')
             vertex_source = vertexFile.read()
             vertexFile.close()
-        if fragmentLocation:
-            fragmentFile = open(fragmentLocation, 'r')
+        if fragment_source:
+            fragmentFile = open(fragment_source, 'r')
             fragment_source = fragmentFile.read()
             fragmentFile.close()
-    else:
-        vertex_source = vertexLocation
-        fragment_source = fragmentLocation
 
     if vertex_source:
         vertex_shader = compileShader(vertex_source, GL_VERTEX_SHADER)
         glAttachShader(program, vertex_shader)
-        print 'Shader program', vertexLocation, 'succesfully compiled.'
     if fragment_source:
         fragment_shader = compileShader(fragment_source, GL_FRAGMENT_SHADER)
         glAttachShader(program, fragment_shader)
-        print 'Shader program', fragmentLocation, 'succesfully compiled.'
 
     glLinkProgram(program)
 

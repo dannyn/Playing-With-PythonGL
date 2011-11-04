@@ -24,7 +24,7 @@ class Scene:
         glUseProgram(self.program)
     def update(self, dt):
 
-        self.rot += 0.5
+        self.rot += 5.5
         return 1
 
     def render(self):
@@ -34,7 +34,8 @@ class Scene:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLightfv(GL_LIGHT0, GL_POSITION, self.light);
         glTranslatef(0.0, 0.0, -50.0 )
-        glRotatef(self.rot, 1.0, 0.0, 1.0)
+        glRotatef(15, 0.0, 0.0, 1.0)
+        glRotatef(self.rot, 0.0, 1.0, 0.0)
         self.m.renderImmediateMode()
 
         pygame.display.flip()

@@ -34,7 +34,7 @@ from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
 from OpenGL.GL.ARB import vertex_array_object
 
 from glHelpers import *
-
+from math3d import *
 
 # i am not at all convinced that this is necessary
 class ObjVertex:
@@ -47,7 +47,13 @@ class ObjVertex:
 
     def vector4(self):
         return [self.x,self.y,self.z,1]
+    def __getitem__(self,key):
+        if key == 0: return self.x
+        if key == 1: return self.y
+        if key == 2: return self.z
 
+    def __setitem__(self,key, value):
+        self.data[key] = value
     def __str__(self):
         return '(' + self.x + ','+self.y+','+self.z+')'
 
@@ -59,7 +65,8 @@ class ObjFace:
         self.vertexIndices = []
         self.normalIndices = []
         self.textureIndices =[]
-            
+        
+        self.faceNormal = (0.0,0.0,0.0)
         for point in face:
             v = re.findall('[0-9]+', point)
             self.vertexIndices.append(int(v[0]) - 1)
@@ -202,6 +209,7 @@ class ObjMesh:
                 vertexData.append(self.vertices[face.vertexIndices[i]].z)
                 vertexData.append(1.0)
 
+
         print len(vertexData)
         self.vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
@@ -222,9 +230,14 @@ class ObjMesh:
         glBegin(GL_TRIANGLES)
 
         for face in self.faces:
+            normTri = []
+            for i in range(3):
+                # calculate normal, this really needs to be pre done
+                normTri.append(self.vertices[face.vertexIndices[i]])
+            normal = calcSurfaceNormal(normTri).normalize()
+            glNormal3d(normal[0], normal[1], normal[2])
             for i in range(3):
                 coord = self.vertices[face.vertexIndices[i]]
-                #norm = self.vertexNormals[face.normalIndices[i]]
                 glColor3f(0.0, 0.0, 1.0)
                 glVertex3f(coord.x, coord.y, coord.z)
         glEnd()

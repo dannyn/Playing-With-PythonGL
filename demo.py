@@ -17,14 +17,14 @@ class Scene:
 
     def __init__(self):
 
-        self.m = ObjMesh('data/cube.obj')
+        self.m = ObjMesh('data/teddy.obj')
         self.light = [1.0, 0.0, 1.0, 0.0]
         self.rot = 0
-        self.program=compileProgram('data/toonf2.vert', 'data/toonf2.frag', True)
+        self.program=compileProgram('data/shaders/toonf2.vert', 'data/shaders/toonf2.frag', True)
         glUseProgram(self.program)
     def update(self, dt):
 
-        self.rot += 0.15
+        self.rot += 0.5
         return 1
 
     def render(self):
@@ -33,7 +33,7 @@ class Scene:
         glClearDepth(1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLightfv(GL_LIGHT0, GL_POSITION, self.light);
-        glTranslatef(0.0, 0.0, -10.0 )
+        glTranslatef(0.0, 0.0, -50.0 )
         glRotatef(self.rot, 1.0, 0.0, 1.0)
         self.m.renderImmediateMode()
 

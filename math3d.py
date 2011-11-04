@@ -5,25 +5,87 @@ from math import *
 
 degToRad = 3.14158 * 2.0 / 360.0
 
-class Vector4:
-    def __init (self, x = 0, y = 0, z =0, w = 1):
-        self.data[0] = x
-        self.data[1] = y
-        self.data[2] = z
-        self.data[3] = w
+class Vector3:
+    def __init__(self, v=(0,0,0)):
+        self.data = [0] * 3
+        self.data[0] = v[0]
+        self.data[1] = v[1]
+        self.data[2] = v[2]
+
+    def __getitem__(self,key):
+        return self.data[key]
+
+    def __setitem__(self,key, value):
+        self.data[key] = value
 
     def __str__(self):
-        return 1
-    def __repr__(self):
+        return '(' + str(self[0]) + ','+ str(self[1]) + ',' + str(self[2]) + ')'
+
+    def __add__(self, other):
+        return Vector3( (self[0]+other[0], self[1] + other[1],
+                self[2] + other[2]))
+
+    def __sub__(self, other):
+        return Vector3( (self[0] - other[0], self[1] - other[1], 
+                self[2] - other[2]))
+    def crossProduct(self, other):
+        product = Vector3()
+
+        product[0] = (self[1] * other[2]) - (self[2] * other[1])
+        product[1] = (self[2] * other[0]) - (self[0] * other[2])
+        product[2] = (self[0] * other[1]) - (self[1] * other[0])
+
+        return product
+
+    def dotProduct(self, other):
         return 1
 
+    def magnitude(self):
+        return sqrt(self[0]**2 + self[1]**2 + self[2]**2)
+
     def normalize(self):
-        return 1
-    def __add__(self):
-        return 1
+        m = self.magnitude()
+        return Vector3 (( self[0]/m, self[1]/m, self[2]/m ))
+
+class Vector4:
+    def __init (self, v=(0,0,0,0)):
+        self.data[0] = v[0]
+        self.data[1] = v[1]
+        self.data[2] = v[2]
+        self.data[3] = v[3]
+
+    def __getitem__(self,key):
+        return self.data[key]
+
+    def __setitem__(self,key, value):
+        self.data[key] = value
+
+    def __str__(self):
+        return '(' + str(self[0]) + ',' + str(self[1]) + ',' \
+               + str(self[2]) + ',' + str(self[3]) + ')'
+
+    def __add__(self,other):
+        return Vector4 ( (self[0] + other[0], self[1] + other[1], self[2] + other[2], 
+            self[3] + other[3]))
     def __sub__(self):
         return 1
-    
+
+    def crossProduct(self, other):
+        return 1
+
+    def dotProduct(self, other):
+        return 1
+
+    def magnitude(self):
+        return sqrt(self[0]**2 + self[1]**2 + self[2]**2 + self[3] ** 2)
+
+    def normalize(self):
+        m = self.magnitude()
+        return Vector4 ((self[0]/m, self[1]/m, self[2]/m, self[3]/m))
+
+    def length(self):
+        return 1
+
 """
     Matrix is collumn major and is a single array indexed like so:
 
@@ -133,21 +195,6 @@ class Matrix4:
 
         return (xT, yT, zT, wT)
         
-def getProjectionMatrix(fov, width, height, zFar, zNear):
-
-    fFovRad = fov * degToRad
-    frustrumScale = 1.0# / tan(fFovRad / 2.0)
-
-    pMatrix = Matrix4( [0] * 16)
-    pMatrix[0] = frustrumScale  * (float(height) / float(width))
-    pMatrix[5] = frustrumScale
-    pMatrix[10] = (zFar * zNear) / (zNear - zFar)
-    pMatrix[11] = -1.0
-    pMatrix[14] = (2 * zFar * zNear) / (zNear - zFar)
-    pMatrix[15] = 0
-
-    return pMatrix
-
 
 class MatrixStack:
 
@@ -173,6 +220,22 @@ class MatrixStack:
         m = getScalingMatrix(x,y,z)
         self.curMatrix *= m
 
+def getProjectionMatrix(fov, width, height, zFar, zNear):
+
+    fFovRad = fov * degToRad
+    frustrumScale = 1.0# / tan(fFovRad / 2.0)
+
+    pMatrix = Matrix4( [0] * 16)
+    pMatrix[0] = frustrumScale  * (float(height) / float(width))
+    pMatrix[5] = frustrumScale
+    pMatrix[10] = (zFar * zNear) / (zNear - zFar)
+    pMatrix[11] = -1.0
+    pMatrix[14] = (2 * zFar * zNear) / (zNear - zFar)
+    pMatrix[15] = 0
+
+    return pMatrix
+
+
 def getIdentityMatrix():
     return Matrix4( [1, 0, 0, 0, 
                      0, 1, 0, 0, 
@@ -188,12 +251,10 @@ def getTranslationMatrix(x,y,z):
 
     return m
 
-# rotate theta degrees (randians?) around arbitrary vector (x,y,z)
 def getRotationMatrix(theta, x, y, z):
     m = getIdentityMatrix()
-
-    
     return m
+
 def getRotationMatrixX(theta):
     m = getIdentityMatrix()
     
@@ -237,19 +298,26 @@ def getScalingMatrix(x,y,z):
 
 def calcSurfaceNormal(triangle):
 
-    v1 = triangle[0]
-    v2 = triangle[1]
-    v3 = triangle[2]
+    # cross product of two non parallel vectors on same plan as triangle
+    p1  = Vector3(triangle[0])
+    p2  = Vector3(triangle[1])
+    p3  = Vector3(triangle[2])
 
+    u = p2 - p1
+    v = p3 - p1
 
+    return u.crossProduct(v)
 
 if __name__ == "__main__":
 
 
+    v = Vector3((3, -3, 1))
+    u = Vector3((4,9,2))
+
+    print  v - u
+
+    print calcSurfaceNormal( [(1,1,0), (1,0,0), (0,1,0)])
 
 
-    m = getIdentityMatrix()
-
-    print getTranslationMatrix(1,2,3)
 
 

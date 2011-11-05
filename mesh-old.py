@@ -36,7 +36,52 @@ from OpenGL.GL.ARB import vertex_array_object
 from glHelpers import *
 from math3d import *
 
-class ObjMeshLoader:
+# i am not at all convinced that this is necessary
+class ObjVertex:
+    # expects a tuple or a list
+    # [x,y,z] or (x,y,z)
+    def __init__(self, v):
+        self.x = float(v[0])
+        self.y = float(v[1])
+        self.z = float(v[2])
+
+    def vector4(self):
+        return [self.x,self.y,self.z,1]
+    def __getitem__(self,key):
+        if key == 0: return self.x
+        if key == 1: return self.y
+        if key == 2: return self.z
+
+    def __setitem__(self,key, value):
+        self.data[key] = value
+    def __str__(self):
+        return '(' + self.x + ','+self.y+','+self.z+')'
+
+class ObjFace:
+    
+    # expects vertices sent as a a list of lists or tupples
+    # either (v), (v,t) (v,n,t) depending on whats available
+    def __init__(self, face):
+        self.vertexIndices = []
+        self.normalIndices = []
+        self.textureIndices =[]
+        
+        self.faceNormal = (0.0,0.0,0.0)
+        for point in face:
+            v = re.findall('[0-9]+', point)
+            self.vertexIndices.append(int(v[0]) - 1)
+            if len(v) > 1:
+                if len(v) == 3:
+                    self.normalIndices.append(int(v[1]))
+                    self.textureIndices.append(int(v[2]))
+                else:
+                    self.normalIndices.append(None)
+                    self.textureIndices.append(int(v[1]))
+        
+        self.numVertices = len(self.vertexIndices)
+
+
+class ObjMesh:
 
     def __init__(self, filename=0):
         self.isLoaded = False
@@ -51,12 +96,21 @@ class ObjMeshLoader:
         if filename:
             self.load(filename)
 
+        self.colors = [ [1.0, 0.0, 1.0, 1.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                        [0.0, 0.0, 1.0, 1.0],
+                        [1.0, 1.0, 0.0, 1.0],
+                        [0.0, 1.0, 1.0, 1.0],
+                        [1.0, 0.0, 1.0, 1.0]]
     def load(self, filename):
 
         curMat   = None
         curGroup = None
 
-        getVertex = lambda x: self.vertices.append (tuple (re.findall('-?[0-9]+\.?[0-9]*', x)))
+        #getVertex = lambda x: self.vertices.append (tuple (re.findall('-?[0-9]+\.?[0-9]*', x)))
+        def getVertex(x):
+            v = tuple (re.findall('-?[0-9]+\.?[0-9]*', x))
+            self.vertices.append(ObjVertex(v))
         getTextureVertex = lambda x: 0
         getVertexNormal = lambda x: self.vertexNormals.append( re.findall('-?[0-9]+\.?[0-9]*', x))
         getParamSpaceVertex = lambda x: 0
@@ -66,7 +120,11 @@ class ObjMeshLoader:
         getStepSize = lambda x: 0 
         getPoint = lambda x: 0 
         getLine = lambda x: 0 
-        getFace = lambda x: self.faces.append (tuple (re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)))
+        #getFace = lambda x: self.faces.append (tuple (re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)))
+        # a little more complicated than just a regex
+        def getFace(x):
+            f = re.findall('[0-9]/?[0-9]*/?/?[0-9]*', x)
+            self.faces.append(ObjFace(f))
         getCurv = lambda x: 0
         get2dCurve = lambda x: 0
         getSurf = lambda x: 0 
@@ -78,7 +136,6 @@ class ObjMeshLoader:
         getEnd = lambda x: 0
         getConnect = lambda x: 0
         getGroupName = lambda x: 0
-
         getSmoothingGroup = lambda x: 0 
         getMergingGroup = lambda x: 0 
         getObjectName = lambda x: 0 
@@ -136,12 +193,40 @@ class ObjMeshLoader:
             sys.exit()
 
         for line in fp:
-            if not re.match ('^#|^\s+$', line):
+            if not re.match ('^#', line):
                 tokens [ re.match('^\s*[a-z]+', line).group()](line)
-            print line
 
-        print self.faces
-        print self.vertices
+        print 'OBJ file', 'filename, was succesfully loaded.'
+
+
+    def generateNormals(self):
+        return 1 
+
+    def render(self):    
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0,4,GL_FLOAT, GL_FALSE, 0, c_void_p(0))
+        glDrawArrays(GL_TRIANGLES,0,36)
+
+        glBindBuffer(GL_ARRAY_BUFFER,0)
+
+    def renderImmediateMode(self):
+        glBegin(GL_TRIANGLES)
+
+        for face in self.faces:
+            normTri = []
+            for i in range(3):
+                # calculate normal, this really needs to be pre done
+                normTri.append(self.vertices[face.vertexIndices[i]])
+            normal = calcSurfaceNormal(normTri).normalize()
+            glNormal3d(normal[0], normal[1], normal[2])
+            for i in range(3):
+                coord = self.vertices[face.vertexIndices[i]]
+                glColor3f(0.0, 0.0, 1.0)
+                glVertex3f(coord.x, coord.y, coord.z)
+        glEnd()
+
 
 class VertexAttr:
     def __init__(self, p = Vector3(), c = Vector3(), n = Vector3()):
@@ -158,8 +243,7 @@ class Mesh:
         self.vertexIndices = []
 
     def triangles(self):
-        #http://code.activestate.com/recipes/303060-group-a-list-into-sequential-n-tuples/ 
-        return itertools.izip(*[itertools.islice(self.vertexIndices, i, None, 3) for i in range(3)])
+        return itertools.izip(*[itertools.islice(lst, i, None, n) for i in range(n)])
 
 if __name__ == "__main__":        
-    m = ObjMeshLoader('data/cube.obj')
+    m = ObjMesh('data/cube.obj')

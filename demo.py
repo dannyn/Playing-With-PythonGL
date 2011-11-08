@@ -17,15 +17,16 @@ class Scene:
 
     def __init__(self):
 
-        self.m = ObjMesh('data/teddy.obj')
-        self.light = [1.0, 0.0, 1.0, 0.0]
-        self.rot = 0
+        self.m = ObjMeshLoader('data/teddy.obj')
+        self.m.createVertexIndex()
+        self.m.createVertexNormals()
+        self.light = [1.0, 0.0, 1.4, 0.0]
         self.program=compileProgram('data/shaders/toonf2.vert', 'data/shaders/toonf2.frag', True)
         glUseProgram(self.program)
-    def update(self, dt):
+        self.theta = 15
 
-        self.rot += 5.5
-        return 1
+    def update(self, dt):
+        self.theta += 0.9
 
     def render(self):
         glLoadIdentity()
@@ -34,9 +35,9 @@ class Scene:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLightfv(GL_LIGHT0, GL_POSITION, self.light);
         glTranslatef(0.0, 0.0, -50.0 )
-        glRotatef(15, 0.0, 0.0, 1.0)
-        glRotatef(self.rot, 0.0, 1.0, 0.0)
-        self.m.renderImmediateMode()
+        glRotatef(25, 0.0, 0.0, 1.0)
+        glRotatef(self.theta , 0.0, 1.0, 0.0)
+        self.m.render()
 
         pygame.display.flip()
 
@@ -57,10 +58,8 @@ if __name__ == "__main__":
     glDepthFunc(GL_LESS)                # The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST)             # Enables Depth Testing
     glShadeModel(GL_SMOOTH)             # Enables Smooth Color Shading
-
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()                    # Reset The Projection Matrix
-# Calculate The Aspect Ratio Of The Window
     gluPerspective(45.0, float(320)/float(200), 0.1, 100.0)
 
     glMatrixMode(GL_MODELVIEW)

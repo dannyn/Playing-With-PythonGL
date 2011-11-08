@@ -308,6 +308,14 @@ def calcSurfaceNormal(triangle):
 
     return u.crossProduct(v)
 
+# returns a tuple all of type float
+def floatTuple(t):
+    l = []
+    for e in t:
+        l.append(float(e))
+    return tuple(l)
+
+
 if __name__ == "__main__":
 
 

@@ -7,7 +7,7 @@
 ####
 
 import re
-
+import itertools
 from ctypes import *
 import sys
 
@@ -138,10 +138,58 @@ class ObjMeshLoader:
         for line in fp:
             if not re.match ('^#|^\s+$', line):
                 tokens [ re.match('^\s*[a-z]+', line).group()](line)
-            print line
+        print "The file ", filename,"succesfully loaded."
 
-        print self.faces
-        print self.vertices
+    def loadMTLFile(self, filename):
+        return 0
+
+    def createVertexIndex(self):
+        ### this needs to be modified to sort itself so that
+        ### faces which share vertices end up next to each
+        ### other as much as possible
+        self.vertexIndex = []
+
+        for face in self.faces:
+            for vertex in face:
+                v = re.findall('[0-9]+', vertex)
+                self.vertexIndex.append(int(v[0])-1)
+
+    def createVertexNormals(self):
+        surfNormals = []
+        trianglesIndexed = zip(*[self.vertexIndex[i::3] for i in range(3)]) 
+        trianglesCoords  = [self.createTriangle(t) for t in trianglesIndexed]
+        surfaceNormals   = [calcSurfaceNormal(t) for t in trianglesCoords]
+ 
+        self.vertexAttrs = []
+        for i,v in enumerate(self.vertices) :
+            p = Vector3( (float(v[0]), float(v[1]), float(v[2])))
+            # calculate vertex normal
+            # this isnt weighted, and may not be neccessary as some obj
+            # files have this calculated
+            # although, because of the way vertex indices work in obj files
+            # and the way opengl wants them i have half a mind to always do it myself
+            n = Vector3()
+            for j,t in enumerate(trianglesIndexed):
+                # if i is in t
+                if i in t:
+                    n = n + surfaceNormals[j]
+            n = n.normalize()
+            self.vertexAttrs.append(VertexAttr(p, None, n))
+
+    # takes 3 vertexIndices and outputs them to a tuple of 
+    # coordinates
+    def createTriangle(self, t):
+        return Vector3( (floatTuple(self.vertices[t[0]]), \
+            floatTuple(self.vertices[t[1]]), floatTuple(self.vertices[t[2]])))
+
+    def render(self):
+        glBegin(GL_TRIANGLES)
+        for v in self.vertexIndex:
+            va = self.vertexAttrs[v]
+            glColor3f(1.0, 0.0, 0.0)
+            glNormal3f(va.normal[0], va.normal[1], va.normal[2])
+            glVertex3f(va.posistion[0], va.posistion[1], va.posistion[2])
+        glEnd()
 
 class VertexAttr:
     def __init__(self, p = Vector3(), c = Vector3(), n = Vector3()):
@@ -152,6 +200,8 @@ class VertexAttr:
     def toList(self):
         return 1
 
+    def __str__(self):
+        return str(self.posistion) + str(self.color) + str(self.normal)
 class Mesh:
     def __init__(self, filename=None):
         self.vertexAttrs = []
@@ -163,3 +213,7 @@ class Mesh:
 
 if __name__ == "__main__":        
     m = ObjMeshLoader('data/cube.obj')
+
+    m.createVertexIndex()
+    m.createVertexNormals()
+    m.render()

@@ -16,13 +16,13 @@ void main()
     // these steps are creating ambient lighting, 
     // this will need to be fixed
 	if (intensity > 0.95)
-        gl_Color *= 0.95;
+        color = gl_Color * 0.95;
 	else if (intensity > 0.5)
-        gl_Color *= 0.70;
+        color = gl_Color * 0.70;
 	else if (intensity > 0.25)
-        gl_Color *= 0.40;
+        color = gl_Color * 0.40;
 	else
-        gl_Color *= 0.25;	
+        color = gl_Color * 0.25;	
 
-	gl_FragColor = gl_Color;
+	gl_FragColor = color;
 } 

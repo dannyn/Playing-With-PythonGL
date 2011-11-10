@@ -232,6 +232,11 @@ class TerrainMesh:
         self.fault()
         self.fault()
         self.fault()
+        self.fault()
+ 
+        self.fault()
+        self.fault()
+        self.fault()
  
     def fault(self):
         # http://www.lighthouse3d.com/opengl/terrain/index.php3?impdetails 

@@ -1,0 +1,12 @@
+
+    * Change meshes to use VBOs
+    * Font rendering
+    * Impelemnt texture and materials in model loading.
+    * Do outlining in shaders (to enable adding a sketchy effect)
+    * 2d reverse polar camera needs to be updated to 3d
+    * 3d math code needs tidying up, make vectors iterable
+    * eliminate all use of the old opengl matrix stack
+    * a debug and logging module
+        - universally turn on debugging in one place
+        - log to stdout, file, or where ever
+    * fix input, make an array of keys that are down or up, mouse movement

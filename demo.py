@@ -100,7 +100,7 @@ class Scene:
         self.t.renderOutline()
         glPopMatrix()
 
-        glPushMatrix()
+        '''glPushMatrix()
         glRotatef(25, 0.0, 0.0, 1.0)
         glRotatef(self.theta , 0.0, 1.0, 0.0)
         glTranslatef(0.0, 2.0, 0.0)
@@ -118,7 +118,7 @@ class Scene:
         glTranslate(3.0, 0.0, 0.0)
         self.m.render(0.0, 0.0, 1.0)
         self.m.renderOutline()
-        glPopMatrix()
+        glPopMatrix()'''
 
         pygame.display.flip()
 

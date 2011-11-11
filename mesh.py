@@ -223,28 +223,64 @@ class VertexAttr:
 
 
 class TerrainMesh:
+    # in all functions width is along x axis and height is along z axia
     def __init__(self, width=10, height=10):
         self.width = width
         self.height = height
         self.heightMap= [ [0 for x in range(self.width)] for y in range(self.height) ]
         self.normals = [] 
-        self.fault()
-        self.fault()
-        self.fault()
-        self.fault()
-        self.fault()
- 
-        self.fault()
-        self.fault()
-        self.fault()
- 
+        
+        for j in range(8):
+            self.fault()
+
+        #self.createVBO()
+
+        for x in range(self.width-1):
+            for y in range(self.height-1):
+                print self.heightMap[x][y],
+            print ''
+        print ''
+        for x in range(self.width-1):
+            for y in range(self.height-1):
+                print self.vertices[x * self.width +y]
+            print ''
+        print self.vertices
+        print "Terrain successfully generated."
+
+    def createVBO(self):
+        
+        self.vbo = glGenBuffers(1)
+
+        # step 1: compute the coordinates of each vertex, similar to rendering
+        #   * todo * 
+        #   some kind of size factor so each unit accross the map is equal to 
+        #   n units in model space
+        #
+        #  all these array can be index (x,z) = array[x * self.height + z]
+        #
+        # this is actually retarded, this will be done in a generateArrays
+        # function which will get called after anytime fault or smooth is
+        # step 2: create indexArray of triangles
+        #self.vertexIndices = [self.heightMap[x][y] for x in self.width for y in self.height]
+        # step 3: calculate vertex normals
+
+        self.vertexNormals = [ [0 for x in range(self.width)] for y in range(self.height) ]
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    def generateArrays(self):
+
+        self.vertices = [(x,self.heightMap[x][z],z) for x in range(self.width) 
+                for z in range(self.height)]
+        self.computeVertexNormals
+
     def fault(self):
         # http://www.lighthouse3d.com/opengl/terrain/index.php3?impdetails 
         v = random.random()
         a = math.sin(v)
         b = math.cos(v)
         d = math.sqrt(self.width * self.width + self.height * self.height)
-        #c = random.randrange(-d/2, d/2)
         c = random.random() * d - d/2
 
         for tx in range(self.width-1):
@@ -253,14 +289,30 @@ class TerrainMesh:
                     self.heightMap[tx][tz] +=   random.random()  /3
                 else:
                     self.heightMap[tx][tz] -=   random.random() / 3
-        self.computeVertexNormals
+
+
+    def smooth(self):
+        return 1
 
     def computeVertexNormals(self):
         self.normals = []
         for x in range(self.width-1):
-            for y in range(self.width-1):
+            for z in range(self.width-1):
                 self.normals.append(1)
+
+
         return 1
+
+    def computeSurfaceNormals(self):
+
+        self.surfaceNormals = [ [0 for x in range(self.width)] for y in range(self.height) ]
+
+        for x in range(self.width-1):
+            for z in range(self.height-1):
+                n = calcSurfaceNormal( [(x, self.heightMap[x][z],z),
+                        (x,self.heightMap[x][z+1], z+1),
+                        (x+1,self.heightMap[x+1][z+1], z+1)])
+
 
     def render(self, r = 0, g = 0.7, b = 0, a = 1):
         #glDisable(GL_CULL_FACE)
@@ -271,16 +323,16 @@ class TerrainMesh:
         glColor3f(r,g,b,a)
 
         for x in range(self.width-1):
-            for y in range(self.height-1):
-                n = calcSurfaceNormal( [(x, self.heightMap[x][y],y),
-                        (x,self.heightMap[x][y+1], y+1),
-                        (x+1,self.heightMap[x+1][y+1], y+1)])
+            for z in range(self.height-1):
+                n = calcSurfaceNormal( [(x, self.heightMap[x][z],z),
+                        (x,self.heightMap[x][z+1], z+1),
+                        (x+1,self.heightMap[x+1][z+1], z+1)])
 
                 glNormal3f(n[0],n[1],n[2])
-                glVertex3f(x,self.heightMap[x][y], y)
-                glVertex3f(x,self.heightMap[x][y+1], y+1)
-                glVertex3f(x+1,self.heightMap[x+1][y+1], y+1)
-                glVertex3f(x+1,self.heightMap[x+1][y], y)
+                glVertex3f(x,self.heightMap[x][z], z)
+                glVertex3f(x,self.heightMap[x][z+1], z+1)
+                glVertex3f(x+1,self.heightMap[x+1][z+1], z+1)
+                glVertex3f(x+1,self.heightMap[x+1][z], z)
 
 
         glEnd()
@@ -314,4 +366,4 @@ class Mesh:
 
 if __name__ == "__main__":        
 
-    t = TerrainMesh()
+    t = TerrainMesh(5,5)

@@ -5,7 +5,6 @@
 # Shooting for a complete implementation as outlined here http://paulbourke.net/dataformats/obj/
 #
 ####
-
 import re
 import itertools
 from ctypes import *
@@ -16,6 +15,8 @@ import random
 import pygame
 from pygame.locals import *
 
+#  i dont remember where i stole this from
+#  need to test on other platforms to see if its needed
 try:
     # For OpenGL-ctypes
     from OpenGL import platform
@@ -31,12 +32,125 @@ except ImportError:
         path = find_library('OpenGL')
         gl = cdll.LoadLibrary(path)
 
-from OpenGL.GL import *
-from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
-from OpenGL.GL.ARB import vertex_array_object
+#from OpenGL.GL import *
+#from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
+#from OpenGL.GL.ARB import vertex_array_object
 
+#import OpenGL
 from glHelpers import *
 from math3d import *
+
+
+'''
+    materials internally are a dictionary indexed by the material's name (newmtl)
+'''
+class ObjMaterials:
+    def __init__(self, filename):
+        self.loadMTLFile(filename)
+
+    def __getitem__(self,key):
+        return self.materials[key]
+
+    def loadMTLFile(self, filename):
+
+        def newMaterial(x):
+            # this is a really, really, stupid way to do this
+            # but i cant find a better way
+            self.materials[self.curMat['Name']] = self.curMat
+            self.curMat = self.getDefaultMat()
+            name =  re.split('newmtl ',x)[1:]
+            self.curMat['Name'] = name[0].rstrip()
+
+        def getKs (x):
+            l = re.findall('[0-9]+\.?[0-9]*',x)
+            values = tuple([float(v) for v in l]) # convert all to float
+            self.curMat['Ks'] =  values
+
+        def getKd (x):
+            l = re.findall('[0-9]+\.?[0-9]*',x)
+            values = tuple([float(v) for v in l]) # convert all to float
+            self.curMat['Kd'] =  values
+        def getKa (x):
+            l = re.findall('[0-9]+\.?[0-9]*',x)
+            values = tuple([float(v) for v in l]) # convert all to float
+            self.curMat['Ka'] =  values
+        def getKe (x):
+            l = re.findall('[0-9]+\.?[0-9]*',x)
+            values =tuple([float(v) for v in l]) # convert all to float
+            self.curMat['Ke'] =  values
+
+        notImplemented = lambda x: 0
+
+
+        self.materials = {}
+        self.curMat = self.getDefaultMat()
+
+        tokens = {'newmtl': newMaterial,
+                  'Ns':     notImplemented,
+                  'd' :     notImplemented,
+                  'illum':  notImplemented,
+                  'Kd':     getKd,
+                  'Ka':     getKa,
+                  'Ks':     getKs,
+                  'Ke':     getKe}
+        try:
+            fp = open (filename, 'r')
+        except:
+            print "Unablge to open", filename
+            sys.exit()
+
+        for line in fp:
+            if not re.match ('^#|^\s+$', line):
+                tokens [ re.match('^\s*[A-Za-z]+', line).group()](line)
+
+        self.materials[self.curMat['Name']] = self.curMat
+        print 'Material file', filename, 'loaded.'
+
+    ''' returns a default material to use
+        think of it like a template '''
+    def getDefaultMat(self):
+        return { 'Name':  'Default',
+                 'Ns':    100.0,
+                 'd':     1.0,
+                 'illum': 2,
+                 'Kd':    (1.0, 1.0, 1.0),
+                 'Ka':    (1.0, 1.0, 1.0),
+                 'Ks':    (1.0, 1.0, 1.0),
+                 'Ke':    (1.0, 1.0, 1.0)}  
+
+    def __str__(self):
+        s = '' 
+        for m in self.materials:
+            s += '------------\n' + m + '\n'
+            for e in self[m]:
+                s += e + ':'  + str(self[m][e]) + '\n'
+        return s
+
+class ObjGroup:
+
+    def __init__(self, name):
+        self.faces = []
+        self.name = name
+        self.materials = None
+
+    # expects a face in v/t/n form
+    def addFace(self, f):
+        face = [re.split('/', vertex)  for vertex in f]
+        # convert to int, not good, wont do texture v[1]
+        # also subtract 1 because obj indices start at 
+        # zero
+        face = [[int(v[0])-1, v[1], int(v[2])-1]      for v in face] 
+        self.faces.append(face)
+
+    def setMaterial(self, matName):
+        self.material = matName
+
+    def __str__(self):
+        s = ''
+        s += self.name + '\n'
+        for f in self.faces:
+            s += str(f)
+        return s
 
 class ObjMeshLoader:
 
@@ -46,7 +160,7 @@ class ObjMeshLoader:
         self.vertices = []
         self.faces = []
         self.vertexNormals = []
-        self.groups = []
+        self.groups = {}
     
         self.vao = 0
 
@@ -55,81 +169,74 @@ class ObjMeshLoader:
 
     def load(self, filename):
 
-        curMat   = None
-        curGroup = None
+        self.curMat  = None
+        self.curGroup = None
+    
+        getVertex = lambda x: self.vertices.append (tuple([float(v)
+            for v in re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)]))
 
-        getVertex = lambda x: self.vertices.append (tuple (re.findall('-?[0-9]+\.?[0-9]*', x)))
-        getTextureVertex = lambda x: 0
-        getVertexNormal = lambda x: self.vertexNormals.append( re.findall('-?[0-9]+\.?[0-9]*', x))
-        getParamSpaceVertex = lambda x: 0
-        getCsType = lambda x: 0
-        getDegree = lambda x: 0 
-        getBasisMatrix = lambda x: 0 
-        getStepSize = lambda x: 0 
-        getPoint = lambda x: 0 
-        getLine = lambda x: 0 
-        getFace = lambda x: self.faces.append (tuple (re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)))
-        getCurv = lambda x: 0
-        get2dCurve = lambda x: 0
-        getSurf = lambda x: 0 
-        getParamValue = lambda x: 0
-        getOuterTrim = lambda x: 0
-        getInnerTrim = lambda x: 0 
-        getSpecialCurve = lambda x: 0
-        getSpecialPoint = lambda x: 0
-        getEnd = lambda x: 0
-        getConnect = lambda x: 0
-        getGroupName = lambda x: 0
+        def getVertexNormal(x):
+            n = re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)
+            n = tuple([float(v) for v in n])
+            self.vertexNormals.append(n)
 
-        getSmoothingGroup = lambda x: 0 
-        getMergingGroup = lambda x: 0 
+        def getFace(x):
+            f = re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)
+            self.curGroup.addFace(f)
         getObjectName = lambda x: 0 
-        getBevelInt = lambda x: 0 
-        getColorInt = lambda x: 0 
-        getDissolveInt = lambda x: 0 
-        getLevelOfDetail = lambda x: 0
-        getMaterialName = lambda x: 0 
-        getMaterialLibrary = lambda x: 0 
-        getShadowCasting = lambda x: 0 
-        getRayTracing = lambda x: 0 
-        getCurveApprox = lambda x: 0 
-        getSurfaceApprox = lambda x: 0 
+
+        def getMaterialName(x):
+            matName = re.split('usemtl ',x)[-1].rstrip()
+            self.curGroup.setMaterial(matName)
+            
+        def getMaterialLibrary(x):
+            filename = re.split('mtllib ',x)[-1].rstrip()
+            self.materials = ObjMaterials(filename)
+            self.curMat = 'Default'      
+
+        def setGroup(x):
+            if self.curGroup:
+                self.groups[self.curGroup.name] = self.curGroup
+            name = re.split('g ', x)[-1].rstrip()
+            self.curGroup = ObjGroup(name)
+
+        notImplemented = lambda x: 0
 
         tokens = {'v'          : getVertex,
-                  'vt'         : getTextureVertex,
+                  'vt'         : notImplemented,
                   'vn'         : getVertexNormal,
-                  'vp'         : getParamSpaceVertex,
-                  'cstype'     : getCsType,
-                  'deg'        : getDegree,
-                  'bmat'       : getBasisMatrix,
-                  'setp'       : getStepSize,
-                  'p'          : getPoint,
-                  'l'          : getLine,
+                  'vp'         : notImplemented,
+                  'cstype'     : notImplemented,
+                  'deg'        : notImplemented,
+                  'bmat'       : notImplemented,
+                  'setp'       : notImplemented,
+                  'p'          : notImplemented,
+                  'l'          : notImplemented,
                   'f'          : getFace,
-                  'curv'       : getCurv,
-                  'curv2'      : get2dCurve,
-                  'surf'       : getSurf,
-                  'param'      : getParamValue,
-                  'trim'       : getOuterTrim,
-                  'hole'       : getInnerTrim,
-                  'scrv'       : getSpecialCurve,
-                  'sp'         : getSpecialPoint,
-                  'end'        : getEnd,
-                  'con'        : getConnect,
-                  'g'          : getGroupName,
-                  's'          : getSmoothingGroup,
-                  'mg'         : getMergingGroup,
+                  'curv'       : notImplemented,
+                  'curv2'      : notImplemented,
+                  'surf'       : notImplemented,
+                  'param'      : notImplemented,
+                  'trim'       : notImplemented,
+                  'hole'       : notImplemented,
+                  'scrv'       : notImplemented,
+                  'sp'         : notImplemented,
+                  'end'        : notImplemented,
+                  'con'        : notImplemented,
+                  'g'          : setGroup,
+                  's'          : notImplemented,
+                  'mg'         : notImplemented,
                   'o'          : getObjectName,
-                  'bevel'      : getBevelInt,
-                  'c_interp'   : getColorInt,
-                  'd_interp'   : getDissolveInt,
-                  'lod'        : getLevelOfDetail,
+                  'bevel'      : notImplemented,
+                  'c_interp'   : notImplemented,
+                  'd_interp'   : notImplemented,
+                  'lod'        : notImplemented,
                   'usemtl'     : getMaterialName,
                   'mtllib'     : getMaterialLibrary,
-                  'shadow_obj' : getShadowCasting,
-                  'trace_obj'  : getRayTracing,
-                  'ctech'      : getCurveApprox,
-                  'stech'      : getSurfaceApprox}
+                  'shadow_obj' : notImplemented,
+                  'trace_obj'  : notImplemented,
+                  'ctech'      : notImplemented,
+                  'stech'      : notImplemented}
 
         try:
             fp = open(filename, 'r')
@@ -140,10 +247,12 @@ class ObjMeshLoader:
         for line in fp:
             if not re.match ('^#|^\s+$', line):
                 tokens [ re.match('^\s*[a-z]+', line).group()](line)
+
+        if self.curGroup:                
+            self.groups[self.curGroup.name] = self.curGroup
+
         print "The file ", filename,"succesfully loaded."
 
-    def loadMTLFile(self, filename):
-        return 0
 
     def createVertexIndex(self):
         ### this needs to be modified to sort itself so that
@@ -170,6 +279,7 @@ class ObjMeshLoader:
             # this isnt weighted, and may not be neccessary as some obj
             # files have this calculated
             # although, because of the way vertex indices work in obj files
+
             # and the way opengl wants them i have half a mind to always do it myself
             n = Vector3()
             for j,t in enumerate(trianglesIndexed):
@@ -184,186 +294,74 @@ class ObjMeshLoader:
         return Vector3( (floatTuple(self.vertices[t[0]]), \
             floatTuple(self.vertices[t[1]]), floatTuple(self.vertices[t[2]])))
 
-    def render(self, r=1.0, g=0.0, b=0.0,a=1.0):
-        glBegin(GL_TRIANGLES)
-        for v in self.vertexIndex:
-            va = self.vertexAttrs[v]
-            glColor4f(r,g,b,a)
-            glNormal3f(va.normal[0], va.normal[1], va.normal[2])
-            glVertex3f(va.posistion[0], va.posistion[1], va.posistion[2])
-        glEnd()
+    def createMesh(self):
+        m = Mesh()
 
-    def renderOutline(self):
-        #glEnable(GL_BLEND)
-        #glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
-        glPolygonMode(GL_BACK, GL_LINE)
-        glCullFace(GL_FRONT)
-        glLineWidth(8.0)
-        self.render(0.0, 0.0, 0.0)
-        #self.render(0.0,0.0,0.0)
-        #glLineWidth(4.0)
-        #self.render(0.0,0.0,0.0,0.7)
-        #glLineWidth(5.0)
-        #self.render(0.0,0.0,0.0,0.4)
-        glCullFace(GL_BACK)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        #glDisable(GL_BLEND)
+        attrs = []
+        indices = []
+        
+        for name, g in self.groups.iteritems():
+            self.createArraysFromGroup(g)
 
+    def createArraysFromGroup(self, groupObj):
+        attrs = []
+        indices = []
+        # get color 
+        # this is a huge for now, adding features off of materials goes here
+        mat = self.materials[groupObj.material]
+        color = list(mat['Kd'])
+        print 'starting', color
+        curIndex = 0
+        indices = []
+        for f in groupObj.faces:
+            for v in f:    
+                vIndex = v[0]
+                nIndex = v[2]
+                a = VertexAttr(Vector3(self.vertices[vIndex]),
+                               Vector3(color),
+                               Vector3(self.vertexNormals[nIndex]))
+                # RIGHT HERE ******
+                # need to check if a is already in attrs
+                # if it is then just add another (appropriate)
+                # index instead of creating another attr
+                for i, t in enumerate(attrs):
+                    if t == a:
+                        indices.append(i)
+                else:
+                    attrs.append(a)
+                    indices.append(curIndex)
+                    curIndex += 1
+                print a, indices
+
+'''
+    internal representation of a mesh that works well with opengl VBOs
+
+    a loader should have a function that returns one of these
+'''
 class VertexAttr:
     def __init__(self, p = Vector3(), c = Vector3(), n = Vector3()):
-        self.posistion = p
-        self.color     = c
-        self.normal    = n
-
-    def toList(self):
-        return 1
-
+        # should probably be try and then if it cant assume its already 
+        # vector and just assign
+        self.posistion = Vector3(p)
+        self.color     = Vector3(c)
+        self.normal    = Vector3(n)
     def __str__(self):
         return str(self.posistion) + str(self.color) + str(self.normal)
+    def __eq__(self, other):
+        # BUG 
+        # if you do this != it doesnt call _eq_ on Vector3
+        if self.posistion == other.posistion\
+           and  self.color == other.color\
+           and  self.normal == other.normal:
+            return True
+        return False
 
-
-class TerrainMesh:
-    # in all functions width is along x axis and height is along z axia
-    def __init__(self, width=10, height=10):
-        self.width = width
-        self.height = height
-        self.heightMap= [ [0 for x in range(self.width)] for y in range(self.height) ]
-        self.normals = [] 
-        
-        for j in range(8):
-            self.fault()
-
-        #self.createVBO()
-
-        for x in range(self.width-1):
-            for y in range(self.height-1):
-                print self.heightMap[x][y],
-            print ''
-        print ''
-        for x in range(self.width-1):
-            for y in range(self.height-1):
-                print self.vertices[x * self.width +y]
-            print ''
-        print self.vertices
-        print "Terrain successfully generated."
-
-    def createVBO(self):
-        
-        self.vbo = glGenBuffers(1)
-
-        # step 1: compute the coordinates of each vertex, similar to rendering
-        #   * todo * 
-        #   some kind of size factor so each unit accross the map is equal to 
-        #   n units in model space
-        #
-        #  all these array can be index (x,z) = array[x * self.height + z]
-        #
-        # this is actually retarded, this will be done in a generateArrays
-        # function which will get called after anytime fault or smooth is
-        # step 2: create indexArray of triangles
-        #self.vertexIndices = [self.heightMap[x][y] for x in self.width for y in self.height]
-        # step 3: calculate vertex normals
-
-        self.vertexNormals = [ [0 for x in range(self.width)] for y in range(self.height) ]
-
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-
-    def generateArrays(self):
-
-        self.vertices = [(x,self.heightMap[x][z],z) for x in range(self.width) 
-                for z in range(self.height)]
-        self.computeVertexNormals
-
-    def fault(self):
-        # http://www.lighthouse3d.com/opengl/terrain/index.php3?impdetails 
-        v = random.random()
-        a = math.sin(v)
-        b = math.cos(v)
-        d = math.sqrt(self.width * self.width + self.height * self.height)
-        c = random.random() * d - d/2
-
-        for tx in range(self.width-1):
-            for tz in range(self.width-1):
-                if ( a * tx + b * tz - c > 0):
-                    self.heightMap[tx][tz] +=   random.random()  /3
-                else:
-                    self.heightMap[tx][tz] -=   random.random() / 3
-
-
-    def smooth(self):
-        return 1
-
-    def computeVertexNormals(self):
-        self.normals = []
-        for x in range(self.width-1):
-            for z in range(self.width-1):
-                self.normals.append(1)
-
-
-        return 1
-
-    def computeSurfaceNormals(self):
-
-        self.surfaceNormals = [ [0 for x in range(self.width)] for y in range(self.height) ]
-
-        for x in range(self.width-1):
-            for z in range(self.height-1):
-                n = calcSurfaceNormal( [(x, self.heightMap[x][z],z),
-                        (x,self.heightMap[x][z+1], z+1),
-                        (x+1,self.heightMap[x+1][z+1], z+1)])
-
-
-    def render(self, r = 0, g = 0.7, b = 0, a = 1):
-        #glDisable(GL_CULL_FACE)
-        #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        #glPolygonMode(GL_FRONT, GL_FILL)
-        glLineWidth(2.0)
-        glBegin(GL_QUADS)
-        glColor3f(r,g,b,a)
-
-        for x in range(self.width-1):
-            for z in range(self.height-1):
-                n = calcSurfaceNormal( [(x, self.heightMap[x][z],z),
-                        (x,self.heightMap[x][z+1], z+1),
-                        (x+1,self.heightMap[x+1][z+1], z+1)])
-
-                glNormal3f(n[0],n[1],n[2])
-                glVertex3f(x,self.heightMap[x][z], z)
-                glVertex3f(x,self.heightMap[x][z+1], z+1)
-                glVertex3f(x+1,self.heightMap[x+1][z+1], z+1)
-                glVertex3f(x+1,self.heightMap[x+1][z], z)
-
-
-        glEnd()
-        glEnable(GL_CULL_FACE)
-        glPolygonMode(GL_FRONT, GL_FILL)
-
-    def renderOutline(self):
-        glPolygonMode(GL_BACK, GL_LINE)
-        glCullFace(GL_FRONT)
-        glLineWidth(8.0)
-        self.render(0.0,0.0,0.0)
-        glCullFace(GL_BACK)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
-
-    def __str__(self):
-        s = ''
-        for tx in range(self.width-1):
-            for tz in range(self.height-1):
-               s +=  str(self.heightMap[tx][tz]) +  ' '
-            s += "\n"
-        return s
 class Mesh:
     def __init__(self, filename=None):
         self.vertexAttrs = []
         self.vertexIndices = []
 
-    def triangles(self):
-        #http://code.activestate.com/recipes/303060-group-a-list-into-sequential-n-tuples/ 
-        return itertools.izip(*[itertools.islice(self.vertexIndices, i, None, 3) for i in range(3)])
 
 if __name__ == "__main__":        
-
-    t = TerrainMesh(5,5)
+    o = ObjMeshLoader('data/colorcube.obj')
+    o.createMesh()

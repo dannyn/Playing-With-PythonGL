@@ -28,6 +28,12 @@ class Vector3:
     def __sub__(self, other):
         return Vector3( (self[0] - other[0], self[1] - other[1], 
                 self[2] - other[2]))
+    def __eq__(self, other):
+        if self[0] != other[0]: return False 
+        if self[1] != other[1]: return False
+        if self[2] != other[2]: return False
+        return True
+
     def crossProduct(self, other):
         product = Vector3()
 
@@ -45,7 +51,10 @@ class Vector3:
 
     def normalize(self):
         m = self.magnitude()
-        return Vector3 (( self[0]/m, self[1]/m, self[2]/m ))
+        if m > 0:
+            return Vector3 (( self[0]/m, self[1]/m, self[2]/m ))
+        else:
+            return Vector3()
 
 class Vector4:
     def __init (self, v=(0,0,0,0)):
@@ -319,12 +328,9 @@ def floatTuple(t):
 if __name__ == "__main__":
 
 
-    v = Vector3((3, -3, 1))
-    u = Vector3((4,9,2))
-
-    print  v - u
-
-    print calcSurfaceNormal( [(1,1,0), (1,0,0), (0,1,0)])
+    v = Vector3((1.0,-1.0,1.0))
+    u = Vector3((1.0,-1.0,1.0))
+    print v == u
 
 
 

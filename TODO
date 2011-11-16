@@ -10,3 +10,4 @@
         - universally turn on debugging in one place
         - log to stdout, file, or where ever
     * fix input, make an array of keys that are down or up, mouse movement
+    * create lighting system..lights need to rotate

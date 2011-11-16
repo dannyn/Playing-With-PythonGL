@@ -45,7 +45,8 @@ class Camera:
         v = self.toCartesian()
 
         glRotatef(self.theta +90 , 0, 1, 0)
-        glTranslatef(v[0], -2, v[1])
+        #glRotatef(10, 0.0, 0.0, 1.0)
+        glTranslatef(v[0], -5, v[1])
      
         #print 'r', self.r, 'theta(deg)', self.theta, v
 
@@ -53,13 +54,10 @@ class Scene:
 
     def __init__(self):
 
-        self.m = ObjMeshLoader('data/cube.obj')
-        self.teddy = ObjMeshLoader('data/teddy.obj')
-        self.m.createVertexIndex()
-        self.m.createVertexNormals()
-        self.teddy.createVertexIndex()
-        self.teddy.createVertexNormals()
+        self.m = ObjMeshLoader('data/bear.obj')
+        self.p = ObjMeshLoader('data/platform.obj')
         self.light = [1.0, 0.0, 1.4, 0.0]
+
         self.program=compileProgram('data/shaders/toonf2.vert', 'data/shaders/toonf2.frag', True)
         glUseProgram(self.program)
         self.theta = 15
@@ -70,10 +68,18 @@ class Scene:
         self.px = 0
         self.camera = Camera()
 
-        self.celTexture = [0.95, 0.95, 0.95, 1.0,
+        '''self.celTexture = [0.95, 0.95, 0.95, 1.0,
                            0.7,  0.7,  0.7,  1.0,
                            0.4,  0.4,  0.4,  1.0, 
-                           0.25, 0.25, 0.25, 1.0]
+                           0.25, 0.25, 0.25, 1.0]'''
+        self.celTexture = [0.9, 0.9, 0.9, 1.0,
+                        0.8, 0.8, 0.8, 1.0,
+                        0.7, 0.7, 0.7, 1.0,
+                        0.6, 0.6, 0.6, 1.0,
+                        0.5, 0.5, 0.5, 1.0,
+                        0.4, 0.4, 0.4, 1.0,
+                        0.3, 0.3, 0.3, 1.0,
+                        0.2, 0.2, 0.2, 1.0]
         self.texID = glGenTextures(1)
         glBindTexture(GL_TEXTURE_1D, self.texID)
         glPixelStorei(GL_UNPACK_ALIGNMENT,1)
@@ -94,31 +100,25 @@ class Scene:
         
         self.camera.point()
 
-        glPushMatrix()
-        glTranslate(-10.0, 0.0, -10.0)
-        self.t.render()
-        self.t.renderOutline()
-        glPopMatrix()
+        #glPushMatrix()
+        #glTranslate(-10.0, 0.0, -10.0)
+        #self.t.render()
+        #self.t.renderOutline()
+        #glPopMatrix()
 
-        '''glPushMatrix()
-        glRotatef(25, 0.0, 0.0, 1.0)
+        glPushMatrix()
+        #glRotatef(25, 0.0, 0.0, 1.0)
         glRotatef(self.theta , 0.0, 1.0, 0.0)
         glTranslatef(0.0, 2.0, 0.0)
         self.m.render()
         self.m.renderOutline()
         glPopMatrix()
-        
+       
         glPushMatrix()
-        glTranslatef(5.0, 10.0, 0.0)
-        glScalef(0.09, 0.09, 0.09)
-        self.teddy.render(0.0, 2.0, 1.0)
+        glTranslatef(0.0,-1.0,0.0)
+        self.p.render(1.0, 0.0, 1.0)
+        self.p.renderOutline()
         glPopMatrix()
-
-        glPushMatrix()
-        glTranslate(3.0, 0.0, 0.0)
-        self.m.render(0.0, 0.0, 1.0)
-        self.m.renderOutline()
-        glPopMatrix()'''
 
         pygame.display.flip()
 

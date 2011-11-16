@@ -10,5 +10,7 @@ void main()
 	vec3 n = normalize(normal);
 	
 	intensity = dot(lightDir,n);
+    //intensity += 1;
 	gl_FragColor = gl_Color * texture1D(texture, intensity);
+    //gl_FragColor = gl_Color * intensity;
 } 

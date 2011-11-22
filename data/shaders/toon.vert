@@ -1,6 +1,13 @@
-// Vertex program
-    varying vec3 normal;
-    void main() {
-        normal = gl_NormalMatrix * gl_Normal;
-        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    }
+
+
+varying vec3 lightDir,normal;
+
+void main()
+{
+	lightDir = normalize(vec3(gl_LightSource[0].position));
+	normal = gl_NormalMatrix * gl_Normal;
+
+
+    gl_FrontColor = gl_Color;
+	gl_Position = ftransform();
+} 

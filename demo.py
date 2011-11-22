@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 import pygame
 from pygame.locals import *
@@ -43,53 +43,72 @@ class Camera:
 
     def point(self):
         v = self.toCartesian()
-
         glRotatef(self.theta +90 , 0, 1, 0)
-        #glRotatef(10, 0.0, 0.0, 1.0)
-        glTranslatef(v[0], -5, v[1])
+        glTranslatef(v[0], 0, v[1])
      
-        #print 'r', self.r, 'theta(deg)', self.theta, v
 
 class Scene:
-
     def __init__(self):
-
-        self.m = ObjMeshLoader('data/bear.obj')
-        self.p = ObjMeshLoader('data/platform.obj')
         self.light = [1.0, 0.0, 1.4, 0.0]
-
-        self.program=compileProgram('data/shaders/toonf2.vert', 'data/shaders/toonf2.frag', True)
-        glUseProgram(self.program)
-        self.theta = 15
-        self.t = TerrainMesh(20,20)
-        self.rx = 0
-        self.ry = 0
-        self.pz = -18
-        self.px = 0
-        self.camera = Camera()
-
-        '''self.celTexture = [0.95, 0.95, 0.95, 1.0,
+        self.celTexture = [0.95, 0.95, 0.95, 1.0,
                            0.7,  0.7,  0.7,  1.0,
                            0.4,  0.4,  0.4,  1.0, 
-                           0.25, 0.25, 0.25, 1.0]'''
-        self.celTexture = [0.9, 0.9, 0.9, 1.0,
+                           0.25, 0.25, 0.25, 1.0,
+                           0.05, 0.05, 0.05, 1.0]
+        '''self.celTexture = [0.9, 0.9, 0.9, 1.0,
                         0.8, 0.8, 0.8, 1.0,
                         0.7, 0.7, 0.7, 1.0,
                         0.6, 0.6, 0.6, 1.0,
                         0.5, 0.5, 0.5, 1.0,
                         0.4, 0.4, 0.4, 1.0,
                         0.3, 0.3, 0.3, 1.0,
-                        0.2, 0.2, 0.2, 1.0]
-        self.texID = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_1D, self.texID)
+                        0.2, 0.2, 0.2, 1.0]'''
+        self.celTexture.reverse();
+        self.m = loadMesh('data/pig.obj')
+        self.programs = { 
+                'toon'  : compileProgram('data/shaders/toon.vert', 'data/shaders/toon.frag', True),
+                'black' : compileProgram('data/shaders/black.vert', 'data/shaders/black.frag',True),
+                'outline' : compileProgram('data/shaders/outline.vert', 'data/shaders/outline.frag',True)
+        }
+        self.camera = Camera()
+
+        glUseProgram(0)
+
+        #self.sampTexture = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, 0)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        
+        #self.texID = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_1D, 1)
         glPixelStorei(GL_UNPACK_ALIGNMENT,1)
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP)
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, 4, 0, GL_RGBA, GL_FLOAT, self.celTexture)
 
+        self.clock = pygame.time.Clock()
+        
+        #self.texCoordOffsets = numpy.array((),dtype='f')
+        self.texCoordOffsets = [0] * 18
+        self.textureWidth = 640
+        self.textureHeight = 480
+
+        xInc = 1.0 / self.textureWidth
+        yInc = 1.0 / self.textureHeight
+
+        for i in range(3):
+            for j in range(3):
+                self.texCoordOffsets[(((i*3)+j)*2)+0] = (-1.0 * xInc) + (i * xInc)
+                self.texCoordOffsets[(((i*3)+j)*2)+1] = (-1.0 * yInc) + (j * yInc)
+
     def update(self, dt):
-        self.theta += 0.5
+        self.clock.tick()
+        #print self.clock.get_fps()   
 
     def render(self):
         glLoadIdentity()
@@ -100,25 +119,52 @@ class Scene:
         
         self.camera.point()
 
-        #glPushMatrix()
-        #glTranslate(-10.0, 0.0, -10.0)
-        #self.t.render()
-        #self.t.renderOutline()
-        #glPopMatrix()
+        glUseProgram(self.programs['toon'])
 
+        uniformLoc = glGetUniformLocation(self.programs['toon'], 'celTex')
+        glUniform1i(uniformLoc, 1)
         glPushMatrix()
-        #glRotatef(25, 0.0, 0.0, 1.0)
-        glRotatef(self.theta , 0.0, 1.0, 0.0)
         glTranslatef(0.0, 2.0, 0.0)
         self.m.render()
-        self.m.renderOutline()
         glPopMatrix()
-       
-        glPushMatrix()
-        glTranslatef(0.0,-1.0,0.0)
-        self.p.render(1.0, 0.0, 1.0)
-        self.p.renderOutline()
-        glPopMatrix()
+
+
+        '''glUseProgram(self.programs['outline'])
+        uniformLoc = glGetUniformLocation(self.programs['outline'], 'sampler0')
+        glUniform1i(uniformLoc, 0)
+        uniformLoc = glGetUniformLocation(self.programs['outline'], 'tc_offset')
+        glUniform2fv(uniformLoc, 9, self.texCoordOffsets)
+
+        glDisable(GL_DEPTH_TEST)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (640-self.textureWidth)/2,
+                (480-self.textureHeight)/2, self.textureWidth, self.textureHeight, 0)
+                    
+        glClear(GL_COLOR_BUFFER_BIT)
+        glBegin(GL_QUADS)
+
+        glMultiTexCoord2f(GL_TEXTURE0, 0.0, 0.0)
+        #glVertex2f(-(self.textureWidth / 640), -(self.textureHeight / 480))
+        glVertex2f(-1, -1)
+
+        glMultiTexCoord2f(GL_TEXTURE0, 0.0, 1.0)
+        #glVertex2f(-(self.textureWidth / 640), (self.textureHeight / 480))
+        glVertex2f(-1,1)
+
+        glMultiTexCoord2f(GL_TEXTURE0, 1.0, 1.0)
+        #glVertex2f((self.textureWidth / 640), (self.textureHeight / 480))
+        glVertex2f(1,1)
+
+        glMultiTexCoord2f(GL_TEXTURE0, 1.0, 0.0)
+        #glVertex2f((self.textureWidth / 640), -(self.textureHeight / 480))
+        glVertex2f(1,-1)
+        glEnd()
+        
+        glEnable(GL_DEPTH_TEST)'''
 
         pygame.display.flip()
 
@@ -133,14 +179,15 @@ class Scene:
         if key == pygame.K_RIGHT:
             self.camera.rotate(5)
 
-scene = 0
-
-def cycle(info):
-    scene.update(0)
-    scene.render()
     
 
 if __name__ == "__main__":
+
+    def cycle(info):
+        scene.update(0)
+        scene.render()
+
+        
     c = Context("demo", (640, 480))
     scene = Scene()
     c.bindFunction(USEREVENT, cycle)

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 ####
 #
@@ -11,13 +11,15 @@ from ctypes import *
 import sys
 import math
 import random
+import array
+import numpy
 
 import pygame
 from pygame.locals import *
 
 #  i dont remember where i stole this from
 #  need to test on other platforms to see if its needed
-try:
+'''try:
     # For OpenGL-ctypes
     from OpenGL import platform
     gl = platform.OpenGL
@@ -31,14 +33,16 @@ except ImportError:
         # finds the absolute path to the framework
         path = find_library('OpenGL')
         gl = cdll.LoadLibrary(path)
+'''
+from OpenGL.GL import *
+from OpenGL.raw import GL
+from OpenGL.arrays import ArrayDatatype as ADT
 
-#from OpenGL.GL import *
-#from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
-#from OpenGL.GL.ARB import vertex_array_object
-
-#import OpenGL
+# todo: get rid of *'s
 from glHelpers import *
 from math3d import *
+ 
+import util
 
 
 '''
@@ -92,7 +96,8 @@ class ObjMaterials:
                   'Kd':     getKd,
                   'Ka':     getKa,
                   'Ks':     getKs,
-                  'Ke':     getKe}
+                  'Ke':     getKe,
+                  'map_Kd': notImplemented}
         try:
             fp = open (filename, 'r')
         except:
@@ -161,24 +166,55 @@ class ObjMeshLoader:
         self.faces = []
         self.vertexNormals = []
         self.groups = {}
-    
-        self.vao = 0
 
         if filename:
             self.load(filename)
 
+    '''
+        loads by state
+        a group is a state
+        faces loaded under a group belong to a state
+
+
+        TODO:
+            load faces with no group, no material, or any combination 
+            thereof
+
+            figure out what to do about the '0.0000000e' hack, why are 
+            objs limited to that level or precision?
+
+            some error checking and handling would also be nice, have it
+            exit gracefully on bad data and not choke and crash like it
+            does now.
+    '''
     def load(self, filename):
 
         self.curMat  = None
         self.curGroup = None
     
-        getVertex = lambda x: self.vertices.append (tuple([float(v)
-            for v in re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)]))
+        def getVertex(x): 
+            
+            data = re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)
+            vertex = []
+            for i,v in enumerate(data):
+                if v == '0.0000000e':
+                    vertex.append(0.0)
+                else:
+                    vertex.append(float(v))
+            self.vertices.append(tuple(vertex))
 
         def getVertexNormal(x):
-            n = re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)
-            n = tuple([float(v) for v in n])
-            self.vertexNormals.append(n)
+            data = re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)
+            normal = []
+            for i, n in enumerate(data):
+                if n == '0.0000000e':
+                    normal.append(0.0)
+                else:
+                    normal.append(float(n))
+            self.vertexNormals.append(tuple(normal))
+
+        def getVertexTex(x):
+            0
 
         def getFace(x):
             f = re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)
@@ -203,7 +239,7 @@ class ObjMeshLoader:
         notImplemented = lambda x: 0
 
         tokens = {'v'          : getVertex,
-                  'vt'         : notImplemented,
+                  'vt'         : getVertexTex,
                   'vn'         : getVertexNormal,
                   'vp'         : notImplemented,
                   'cstype'     : notImplemented,
@@ -253,47 +289,24 @@ class ObjMeshLoader:
 
         print "The file ", filename,"succesfully loaded."
 
+    # here for debugging and because why not
+    def renderImmediate(self):
+        glBegin(GL_TRIANGLES)
+        for name, g in self.groups.iteritems():
+            color = list(self.materials[g.material]['Kd'])
+            glColor3f(color[0], color[1], color[2])
+            for f in g.faces:
+                for v in f:
+                    vIndex = v[0]
+                    nIndex = v[2]
+                    p = self.vertices[vIndex]
+                    n = self.vertexNormals[nIndex]
+                    glNormal3f(n[0],n[1],n[2])
+                    glVertex3f(p[0],p[1],p[2])
+        glEnd()
 
-    def createVertexIndex(self):
-        ### this needs to be modified to sort itself so that
-        ### faces which share vertices end up next to each
-        ### other as much as possible
-        self.vertexIndex = []
 
-        for face in self.faces:
-            for vertex in face:
-                v = re.findall('[0-9]+', vertex)
-                self.vertexIndex.append(int(v[0])-1)
-
-    def createVertexNormals(self):
-        surfNormals = []
-        trianglesIndexed = zip(*[self.vertexIndex[i::3] for i in range(3)]) 
-        trianglesCoords  = [self.createTriangle(t) for t in trianglesIndexed]
-        surfaceNormals   = [calcSurfaceNormal(t) for t in trianglesCoords]
- 
-        self.vertexAttrs = []
-        # i am using enumerate to know the index of the thing i am working on
-        for i,v in enumerate(self.vertices) :
-            p = Vector3( (float(v[0]), float(v[1]), float(v[2])))
-            # calculate vertex normal
-            # this isnt weighted, and may not be neccessary as some obj
-            # files have this calculated
-            # although, because of the way vertex indices work in obj files
-
-            # and the way opengl wants them i have half a mind to always do it myself
-            n = Vector3()
-            for j,t in enumerate(trianglesIndexed):
-                if i in t:
-                    n = n + surfaceNormals[j]
-            n = n.normalize()
-            self.vertexAttrs.append(VertexAttr(p, None, n))
-
-    # takes 3 vertexIndices and outputs them to a tuple of 
-    # coordinates
-    def createTriangle(self, t):
-        return Vector3( (floatTuple(self.vertices[t[0]]), \
-            floatTuple(self.vertices[t[1]]), floatTuple(self.vertices[t[2]])))
-
+    # creates a Mesh object out of data loaded from an obj file
     def createMesh(self):
         m = Mesh()
 
@@ -301,18 +314,37 @@ class ObjMeshLoader:
         indices = []
         
         for name, g in self.groups.iteritems():
-            self.createArraysFromGroup(g)
+            offset = len(attrs)
+            gArray = self.createArraysFromGroup(g)
+            gAttr = gArray[0]
+            gInd  = [i + offset for i in gArray[1]]
 
+            indices += gInd
+            attrs   += gAttr
+        return Mesh(attrs, indices)
+
+    ''' 
+        the real guts of the createMesh function are here
+
+        go through each group and create all the vertex attributes
+        used by that group along with a index list of all the vertices.
+
+        the index list is meant to be GL_TRIANGLES
+
+        the real trick of this function is that it keeps a list of the 
+        attributes already created so if two vertices share the
+        same attribute 
+    '''
     def createArraysFromGroup(self, groupObj):
         attrs = []
         indices = []
-        # get color 
-        # this is a huge for now, adding features off of materials goes here
         mat = self.materials[groupObj.material]
         color = list(mat['Kd'])
-        print 'starting', color
-        curIndex = 0
+        curIndex = 0  
         indices = []
+        # list of already created attrs
+        createdAttrs = {}
+
         for f in groupObj.faces:
             for v in f:    
                 vIndex = v[0]
@@ -320,33 +352,33 @@ class ObjMeshLoader:
                 a = VertexAttr(Vector3(self.vertices[vIndex]),
                                Vector3(color),
                                Vector3(self.vertexNormals[nIndex]))
-                # RIGHT HERE ******
-                # need to check if a is already in attrs
-                # if it is then just add another (appropriate)
-                # index instead of creating another attr
-                for i, t in enumerate(attrs):
-                    if t == a:
-                        indices.append(i)
+                if vIndex in createdAttrs:
+                    indices.append(createdAttrs[vIndex])
                 else:
                     attrs.append(a)
                     indices.append(curIndex)
+                    createdAttrs[vIndex] = curIndex
                     curIndex += 1
-                print a, indices
 
+        return (attrs, indices)
 '''
     internal representation of a mesh that works well with opengl VBOs
 
     a loader should have a function that returns one of these
+
+    A mesh is made up of two parts, vertex attributes and a list of indices
+    into them.  the indices are organzied so every three are a trianble.
 '''
 class VertexAttr:
     def __init__(self, p = Vector3(), c = Vector3(), n = Vector3()):
-        # should probably be try and then if it cant assume its already 
-        # vector and just assign
         self.posistion = Vector3(p)
         self.color     = Vector3(c)
         self.normal    = Vector3(n)
     def __str__(self):
         return str(self.posistion) + str(self.color) + str(self.normal)
+    def __repr__(self):
+        return self.__str__()
+
     def __eq__(self, other):
         # BUG 
         # if you do this != it doesnt call _eq_ on Vector3
@@ -357,11 +389,101 @@ class VertexAttr:
         return False
 
 class Mesh:
-    def __init__(self, filename=None):
-        self.vertexAttrs = []
-        self.vertexIndices = []
+    def __init__(self, attrs=None, indices=None):
+        self.vertexAttrs = attrs
+        self.vertexIndices = indices
 
+
+    # for debugging
+    def printToScreen(self):
+        print '----------------------------------------------'
+        for i in self.vertexIndices:
+            print self.vertexAttrs[i].posistion, i
+
+    def renderImmediate(self):
+        glDisable(GL_CULL_FACE)
+        glBegin(GL_TRIANGLES)
+
+        for i in self.vertexIndices:
+            # for conveincence
+            c = self.vertexAttrs[i].color
+            n = self.vertexAttrs[i].normal
+            p = self.vertexAttrs[i].posistion
+            glColor3f(c[0],c[1],c[2])
+            glNormal3f(n[0],n[1],n[2])
+            glVertex3f(p[0],p[1],p[2])
+        glEnd()
+    
+    '''
+        TODO: 
+            interleaved arrays
+
+            once VBOs are made and anything is processed out of it that is
+            needed all that data loaded from the OBJ files has got to go
+    '''
+    def createVBO(self):
+
+        flatten = lambda x: list(itertools.chain(*x))
+
+        def makeBuffer(target, data):
+            temp = glGenBuffers(1)
+            glBindBuffer(target, temp)
+            glBufferData(target, ADT.arrayByteCount(data), ADT.voidDataPointer(data), GL_STATIC_DRAW)
+            glBindBuffer(target, 0)
+            return temp
+        
+
+        #vertices = numpy.array([list(self.vertexAttrs[v].posistion) for v in self.vertexIndices],dtype = 'f')
+        #normals  = numpy.array([list(self.vertexAttrs[v].normal) for v in self.vertexIndices],dtype = 'f')
+        #colors   = numpy.array([list(self.vertexAttrs[v].color)  for v in self.vertexIndices],dtype = 'f')
+
+
+        length = len(self.vertexAttrs)
+        indices = numpy.array(self.vertexIndices, dtype='i')
+        iVertices = numpy.array([list(self.vertexAttrs[v].posistion) for v in xrange(length)], dtype='f')
+        iNormals  = numpy.array([list(self.vertexAttrs[v].normal) for v in xrange(length)], dtype='f')
+        iColors   = numpy.array([list(self.vertexAttrs[v].color) for v in xrange(length)], dtype='f')
+
+        self.vertexVBO = makeBuffer(GL_ARRAY_BUFFER, iVertices)
+        self.normalVBO = makeBuffer(GL_ARRAY_BUFFER, iNormals)
+        self.colorVBO  = makeBuffer(GL_ARRAY_BUFFER, iColors)
+
+        self.indexVBO  = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, indices)
+
+    def render(self):
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_NORMAL_ARRAY)
+        glEnableClientState(GL_COLOR_ARRAY)
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.vertexVBO)
+        glVertexPointerf(None) 
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.normalVBO)
+        glNormalPointer(GL_FLOAT, 0, None)
+
+        glBindBuffer(GL_ARRAY_BUFFER, self.colorVBO)
+        glColorPointerf(None)
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.indexVBO)
+        glDrawElements(GL_TRIANGLES, len(self.vertexIndices), GL_UNSIGNED_INT, None)
+
+        #glDrawArrays(GL_TRIANGLES, 0, len(self.vertexIndices))
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glDisable(GL_VERTEX_ARRAY)
+        glDisable(GL_NORMAL_ARRAY)
+        glDisable(GL_COLOR_ARRAY)
+
+
+
+# this is the prefered entry point into any of this 
+def loadMesh(filename):
+    mesh = ObjMeshLoader(filename).createMesh()
+
+    mesh.createVBO()
+
+    return mesh
 
 if __name__ == "__main__":        
-    o = ObjMeshLoader('data/colorcube.obj')
-    o.createMesh()
+    mesh = ObjMeshLoader('data/colorcube.obj').createMesh()
+
+

@@ -1,15 +1,17 @@
-// Fragment program
-    varying vec3 normal;
-    void main() {
-        float intensity;
-        vec4 color;
-        vec3 n = normalize(normal);
-        vec3 l = normalize(gl_LightSource[0].position).xyz;
- 
-        // quantize to 5 steps (0, .25, .5, .75 and 1)
-        intensity = (floor(dot(l, n) * 4.0) + 1.0)/4.0;
-        color = vec4(intensity*1.0, intensity*0.5, intensity*0.5,
-            intensity*1.0);
- 
-        gl_FragColor = color;
-    }
+varying vec3 lightDir,normal;
+uniform sampler1D celTex;
+
+void main()
+{
+	float intensity;
+    vec4 celColor;
+    vec3 n;
+
+	// normalizing the lights position to be on the safe side	
+	n = normalize(normal);
+	
+	intensity = dot(lightDir,n);
+
+    celColor = gl_Color * texture1D(celTex, intensity);
+    gl_FragColor =  celColor;
+} 

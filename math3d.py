@@ -20,6 +20,8 @@ class Vector3:
 
     def __str__(self):
         return '(' + str(self[0]) + ','+ str(self[1]) + ',' + str(self[2]) + ')'
+    def __repr__(self):
+        return self.__str__()
 
     def __add__(self, other):
         return Vector3( (self[0]+other[0], self[1] + other[1],

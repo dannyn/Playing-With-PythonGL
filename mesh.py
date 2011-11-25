@@ -42,7 +42,7 @@ from OpenGL.arrays import ArrayDatatype as ADT
 from glHelpers import *
 from math3d import *
  
-import util
+#import util
 
 
 '''
@@ -214,7 +214,15 @@ class ObjMeshLoader:
             self.vertexNormals.append(tuple(normal))
 
         def getVertexTex(x):
-            0
+            data = re.findall('-?[0-9]+\.?[0-9]*e?-?[0-9]*', x)
+            texc = []
+            for i, n in enumerate(data):
+                if n == '0.0000000e':
+                    texc.append(0.0)
+                else:
+                    texc.append(float(n))
+            self.vertexTex.append(tuple(normal))
+           
 
         def getFace(x):
             f = re.findall('-?[0-9]/?[0-9]*/?/?[0-9]*', x)

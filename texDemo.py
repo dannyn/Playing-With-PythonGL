@@ -7,7 +7,7 @@ import math
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
-
+#from Image import *
 ## framework files
 from shader    import *
 from glHelpers import *
@@ -20,11 +20,9 @@ from framework import *
     the x axis.  this makes all rotations around the z axis.
 '''
 class Camera:
-    
-
     def __init__(self):
-        self.r = 1
-        self.theta = 0
+        self.r = 5
+        self.theta = 90
 
     def rotate(self, angle):
         self.theta += angle 
@@ -45,76 +43,36 @@ class Camera:
         v = self.toCartesian()
         glRotatef(self.theta +90 , 0, 1, 0)
         glTranslatef(v[0], 0, v[1])
- 
-'''
-    translate in any direction
-    rotate 360 deg x and y
-    no z rotation
 
-    similar to cameras used in 3d modeling programs
-
-    controls - 
-    WASD or arrow keys translate x and y 
-    mouse wheel zooms in or out along vector that camera is pointing along
-    holding right button and moving mouse rotates x and y (y is back and 
-    forth, x is up and down)
-'''
-class CADCamera:
-    def __init(self):
-            0 
-
-    
-
+# takes a texture and stretches it accross the whole screen
+#class ScreenQuad:
+#    def __init__(self):
 
 class Scene:
     def __init__(self):
-        self.light = [1.0, 0.0, 1.4, 0.0]
-        self.celTexture = [0.95, 0.95, 0.95, 1.0,
-                           0.7,  0.7,  0.7,  1.0,
-                           0.4,  0.4,  0.4,  1.0, 
-                           0.25, 0.25, 0.25, 1.0,
-                           0.05, 0.05, 0.05, 1.0]
-        '''self.celTexture = [0.9, 0.9, 0.9, 1.0,
-                        0.8, 0.8, 0.8, 1.0,
-                        0.7, 0.7, 0.7, 1.0,
-                        0.6, 0.6, 0.6, 1.0,
-                        0.5, 0.5, 0.5, 1.0,
-                        0.4, 0.4, 0.4, 1.0,
-                        0.3, 0.3, 0.3, 1.0,
-                        0.2, 0.2, 0.2, 1.0]'''
-        self.celTexture.reverse();
-        self.m = loadMesh('data/pig.obj')
         self.programs = { 
-                'toon'  : compileProgram('data/shaders/toon.vert', 'data/shaders/toon.frag', True),
+                'tex'  : compileProgram('data/shaders/texdemo.vert', 'data/shaders/texdemo.frag', True),
                 'black' : compileProgram('data/shaders/black.vert', 'data/shaders/black.frag',True)
         }
         self.camera = Camera()
 
-        glUseProgram(0)
+        glEnable(GL_TEXTURE_2D)
+        glUseProgram(self.programs['tex'])
+        texData = loadImage('data/tex.jpg')
+        width = 512 #surface.size[0]
+        height = 512 #surface.size[1]
 
-        #self.texID = glGenTextures(1)
-        glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_1D, 1)
+        #self.texture = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture( GL_TEXTURE_2D,0);
         glPixelStorei(GL_UNPACK_ALIGNMENT,1)
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP)
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, 4, 0, GL_RGBA, GL_FLOAT, self.celTexture)
+        glTexImage2D(GL_TEXTURE_2D, 0, 3,width, height, 0, GL_RGBA,
+                GL_UNSIGNED_BYTE, texData);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
 
         self.clock = pygame.time.Clock()
-        
-        #self.texCoordOffsets = numpy.array((),dtype='f')
-        self.texCoordOffsets = [0] * 18
-        self.textureWidth = 640
-        self.textureHeight = 480
-
-        xInc = 1.0 / self.textureWidth
-        yInc = 1.0 / self.textureHeight
-
-        for i in range(3):
-            for j in range(3):
-                self.texCoordOffsets[(((i*3)+j)*2)+0] = (-1.0 * xInc) + (i * xInc)
-                self.texCoordOffsets[(((i*3)+j)*2)+1] = (-1.0 * yInc) + (j * yInc)
 
     def update(self, dt):
         self.clock.tick()
@@ -125,19 +83,24 @@ class Scene:
         glClearColor(0.5, 0.5, 0.5, 0.0)
         glClearDepth(1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLightfv(GL_LIGHT0, GL_POSITION, self.light);
         
         self.camera.point()
 
-        glUseProgram(self.programs['toon'])
-
-        uniformLoc = glGetUniformLocation(self.programs['toon'], 'celTex')
+        uniformLoc = glGetUniformLocation(self.programs['tex'], 'colorMap')
         glUniform1i(uniformLoc, 1)
-        glPushMatrix()
-        glTranslatef(0.0, 2.0, 0.0)
-        self.m.render()
-        glPopMatrix()
 
+        glBegin(GL_QUADS)
+        glTexCoord2f(1,1)
+        glVertex2f(1.0, 1.0)
+        glTexCoord2f(1,0)
+        glVertex2f(1.0,-1.0)
+        glTexCoord2f(0,0)
+        glVertex2f(-1.0,-1.0)
+        glTexCoord2f(0,1)
+        glVertex2f(-1.0, 1.0)
+
+   
+        glEnd()
         pygame.display.flip()
 
     def onKeyDown(self, e):
@@ -169,8 +132,8 @@ if __name__ == "__main__":
     glDepthFunc(GL_LESS)                # The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST)             # Enables Depth Testing
     glShadeModel(GL_SMOOTH)             # Enables Smooth Color Shading
-    glEnable(GL_CULL_FACE)
-    glCullFace(GL_BACK)
+    #glEnable(GL_CULL_FACE)
+    #glCullFace(GL_BACK)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()                    # Reset The Projection Matrix
     gluPerspective(45.0, float(320)/float(200), 0.1, 100.0)

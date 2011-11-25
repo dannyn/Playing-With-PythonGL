@@ -6,7 +6,7 @@ import sys
 import pygame
 from pygame.locals import *
 
-'''try:
+try:
     # For OpenGL-ctypes
     from OpenGL import platform
     gl = platform.OpenGL
@@ -20,14 +20,14 @@ except ImportError:
         # finds the absolute path to the framework
         path = find_library('OpenGL')
         gl = cdll.LoadLibrary(path)
-'''
+ 
 from OpenGL.GL import *
 
 ## framework files
-#from shader    import *
-#from glHelpers import *
-#from math3d    import *
-#from mesh      import *
+from shader    import *
+from glHelpers import *
+from math3d    import *
+from mesh      import *
 
 
 """
@@ -35,7 +35,6 @@ from OpenGL.GL import *
          It gets 'info' passed to it.
          - info.deltaTime - time in millseconds passed since last frame
 """
-
 class Context:
 
 
@@ -49,11 +48,6 @@ class Context:
         self.timer = pygame.time.Clock()
         self.dt = 0
         self.fps = 0
-
-        self.key = [False] * 500 # need to get size
-        self.mouseButton = [0] * 5
-        self.mouseCoords = (0,0)
-        self.mouseDelta  = (0,0) # how far mouse has moved since last frame
 
     def getDeltaTime(self):
         return self.dt
@@ -69,7 +63,7 @@ class Context:
                 self.dispatch(e)
             self.dt = self.timer.tick(self.fps)
             self.generateEvent(self.dt)
-            self.cycle()
+
 
     def bindFunction(self, event, func):
         self.callbacks[event] = func
@@ -80,21 +74,13 @@ class Context:
 
     def generateEvent(self, name):
         self.dispatch(pygame.event.Event(USEREVENT, deltaTime=name))
-
     def dispatch(self, e):
         if self.callbacks.has_key(e.type):
             self.callbacks[e.type](e)
         elif e.type == QUIT:   ## this should maybe not be here
             self.kill()
-        elif e.type == KEYDOWN:
-            self.key[e.key] = True
-        elif e.type == KEYUP:
-            self.key[e.key] = False
 
     def kill(self):
         self.running = False
 
-    # meant to be overridden by anything subclassing this
-    def cycle(self): 
-        print "too"
 

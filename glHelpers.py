@@ -24,3 +24,19 @@ def createVertexArrayBuffer(vertexData):
     glBufferData(GL_ARRAY_BUFFER, len(vertexData) * 4,  array_type(*vertexData), GL_STATIC_DRAW)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     return vbo
+
+class VertexBufferObject:
+    def __init__(self, vertexAttrs, vertexIndices):
+        self.vbo = createVertexArrayBuffer(vertexAttrs)
+
+
+def loadImage(filename):
+    try:
+        surface = pygame.image.load(filename)
+    except pygame.error, message:
+        print 'Can\'t load ',filename
+        raise SystemExit, message
+
+    texData = pygame.image.tostring(surface, "RGBA", 1)
+    return texData
+

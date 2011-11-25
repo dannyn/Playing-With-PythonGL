@@ -14,4 +14,6 @@ void main()
 
     celColor = gl_Color * texture1D(celTex, intensity);
     gl_FragColor =  celColor;
+    //gl_FragColor = vec4(normal, 1.0);
 } 
+

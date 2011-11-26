@@ -1,33 +1,10 @@
+#!/usr/bin/env python2
 
 from ctypes import *
 import sys
-
-
 import pygame
 from pygame.locals import *
-
-'''try:
-    # For OpenGL-ctypes
-    from OpenGL import platform
-    gl = platform.OpenGL
-except ImportError:
-    try:
-        # For PyOpenGL
-        gl = cdll.LoadLibrary('libGL.so')
-    except OSError:
-        # Load for Mac
-        from ctypes.util import find_library
-        # finds the absolute path to the framework
-        path = find_library('OpenGL')
-        gl = cdll.LoadLibrary(path)
-'''
 from OpenGL.GL import *
-
-## framework files
-#from shader    import *
-#from glHelpers import *
-#from math3d    import *
-#from mesh      import *
 
 
 """

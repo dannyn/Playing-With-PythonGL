@@ -7,46 +7,15 @@ import math
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
+
 #from Image import *
 ## framework files
-from shader    import *
+from renderer  import *
 from glHelpers import *
 from math3d    import *
 from mesh      import *
 from framework import *
-
-''' implemented here as a 2d circle around the origin, 
-    theta is the angle between r-> (of which self.r is the magnitude) and 
-    the x axis.  this makes all rotations around the z axis.
-'''
-class Camera:
-    def __init__(self):
-        self.r = 5
-        self.theta = 90
-
-    def rotate(self, angle):
-        self.theta += angle 
-
-    def move(self, d):
-        self.r += d
-
-    def toCartesian(self):
-        rad =  3.14159/180
-
-        v = Vector3()
-        v[0] = math.cos(rad * self.theta) * self.r
-        v[2] = 0 # only 2d for now so x and z plane
-        v[1] = math.sin(rad * self.theta) * self.r
-        return v
-
-    def point(self):
-        v = self.toCartesian()
-        glRotatef(self.theta +90 , 0, 1, 0)
-        glTranslatef(v[0], 0, v[1])
-
-# takes a texture and stretches it accross the whole screen
-#class ScreenQuad:
-#    def __init__(self):
+from renderer  import *
 
 class Scene:
     def __init__(self):

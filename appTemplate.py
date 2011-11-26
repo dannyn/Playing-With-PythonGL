@@ -9,7 +9,8 @@ import pygame
 
 from framework import *
 
-from texDemo import *
+#from texDemo import *
+from demo import *
 
 class Template(Context):
 
